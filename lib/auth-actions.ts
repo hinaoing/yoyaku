@@ -29,9 +29,33 @@ function formatRetryMessage(seconds?: number) {
   return `送信回数が多すぎます。${minutes}分後にもう一度お試しください。`;
 }
 
+function getConfiguredAppUrl() {
+  const appUrl =
+    process.env.APP_URL ||
+    process.env.NEXT_PUBLIC_APP_URL ||
+    (process.env.NODE_ENV !== "production" ? "http://localhost:3001" : undefined);
+
+  if (!appUrl) {
+    throw new Error("APP_URL を設定してください。");
+  }
+
+  const url = new URL(appUrl);
+
+  if (url.protocol !== "https:" && url.hostname !== "localhost") {
+    throw new Error("APP_URL は https URL にしてください。");
+  }
+
+  return url.origin;
+}
+
+function buildAuthCallbackUrl() {
+  const url = new URL("/auth/callback", getConfiguredAppUrl());
+  url.searchParams.set("next", "/student/bookings?login=1");
+  return url.toString();
+}
+
 export async function sendLoginLink(
   emailInput: string,
-  origin: string,
   turnstileToken: string
 ): Promise<SendLoginLinkResult> {
   const email = normalizeEmail(emailInput);
@@ -64,7 +88,7 @@ export async function sendLoginLink(
     }
 
     const supabaseAdmin = createAdminClient();
-    const redirectTo = `${origin}/auth/callback?next=${encodeURIComponent("/student/bookings?login=1")}`;
+    const redirectTo = buildAuthCallbackUrl();
     const { data, error } = await supabaseAdmin.auth.admin.generateLink({
       type: "magiclink",
       email,

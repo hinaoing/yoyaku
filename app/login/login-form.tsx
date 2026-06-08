@@ -92,7 +92,7 @@ export function LoginForm() {
     setIsSubmitting(true);
     setMessage(null);
 
-    const result = await sendLoginLink(email, window.location.origin, turnstileToken);
+    const result = await sendLoginLink(email, turnstileToken);
 
     setIsSubmitting(false);
     resetTurnstile();
