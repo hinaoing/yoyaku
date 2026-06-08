@@ -7,6 +7,7 @@ import {
 } from "@/lib/time";
 import { validateAvailabilitySlots } from "@/lib/availability-validation";
 import { isJapanHoliday } from "@/lib/japan-holidays";
+import { checkRateLimit } from "@/lib/rate-limit";
 import type { Booking, DateAvailability } from "@/lib/types";
 
 describe("booking cancellation", () => {
@@ -189,5 +190,29 @@ describe("japan holidays", () => {
     expect(isJapanHoliday("2026-09-22")).toBe(true);
     expect(isJapanHoliday("2027-03-22")).toBe(true);
     expect(isJapanHoliday("2026-06-22")).toBe(false);
+  });
+});
+
+describe("rate limiting", () => {
+  it("rejects requests over the fixed window limit", () => {
+    const key = `test-limit-${Date.now()}`;
+    const now = Date.UTC(2026, 5, 9, 12, 0, 0);
+
+    expect(checkRateLimit(key, 2, 60_000, now).allowed).toBe(true);
+    expect(checkRateLimit(key, 2, 60_000, now + 1_000).allowed).toBe(true);
+
+    const blocked = checkRateLimit(key, 2, 60_000, now + 2_000);
+
+    expect(blocked.allowed).toBe(false);
+    expect(blocked.retryAfterSeconds).toBe(58);
+  });
+
+  it("allows requests after the fixed window resets", () => {
+    const key = `test-reset-${Date.now()}`;
+    const now = Date.UTC(2026, 5, 9, 12, 0, 0);
+
+    expect(checkRateLimit(key, 1, 60_000, now).allowed).toBe(true);
+    expect(checkRateLimit(key, 1, 60_000, now + 1_000).allowed).toBe(false);
+    expect(checkRateLimit(key, 1, 60_000, now + 61_000).allowed).toBe(true);
   });
 });

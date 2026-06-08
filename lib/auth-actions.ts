@@ -1,7 +1,10 @@
 "use server";
 
+import { headers } from "next/headers";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/email/resend";
+import { checkRateLimit, clearExpiredRateLimitEntries } from "@/lib/rate-limit";
+import { verifyTurnstileToken } from "@/lib/turnstile";
 
 type SendLoginLinkResult = {
   ok: boolean;
@@ -12,7 +15,25 @@ function normalizeEmail(email: string) {
   return email.trim().toLowerCase();
 }
 
-export async function sendLoginLink(emailInput: string, origin: string): Promise<SendLoginLinkResult> {
+function getClientIp(headerStore: Headers) {
+  return (
+    headerStore.get("cf-connecting-ip") ||
+    headerStore.get("x-real-ip") ||
+    headerStore.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+    "unknown"
+  );
+}
+
+function formatRetryMessage(seconds?: number) {
+  const minutes = Math.max(1, Math.ceil((seconds ?? 60) / 60));
+  return `送信回数が多すぎます。${minutes}分後にもう一度お試しください。`;
+}
+
+export async function sendLoginLink(
+  emailInput: string,
+  origin: string,
+  turnstileToken: string
+): Promise<SendLoginLinkResult> {
   const email = normalizeEmail(emailInput);
 
   if (!email || !email.includes("@")) {
@@ -20,6 +41,28 @@ export async function sendLoginLink(emailInput: string, origin: string): Promise
   }
 
   try {
+    clearExpiredRateLimitEntries();
+
+    const headerStore = await headers();
+    const clientIp = getClientIp(headerStore);
+    const ipLimit = checkRateLimit(`login-link:ip:${clientIp}`, 10, 15 * 60 * 1000);
+
+    if (!ipLimit.allowed) {
+      return { ok: false, message: formatRetryMessage(ipLimit.retryAfterSeconds) };
+    }
+
+    const emailLimit = checkRateLimit(`login-link:email:${email}`, 3, 15 * 60 * 1000);
+
+    if (!emailLimit.allowed) {
+      return { ok: false, message: formatRetryMessage(emailLimit.retryAfterSeconds) };
+    }
+
+    const turnstile = await verifyTurnstileToken(turnstileToken, clientIp === "unknown" ? null : clientIp);
+
+    if (!turnstile.ok) {
+      return { ok: false, message: turnstile.message ?? "確認に失敗しました。もう一度お試しください。" };
+    }
+
     const supabaseAdmin = createAdminClient();
     const redirectTo = `${origin}/auth/callback?next=${encodeURIComponent("/student/bookings?login=1")}`;
     const { data, error } = await supabaseAdmin.auth.admin.generateLink({
@@ -52,7 +95,7 @@ export async function sendLoginLink(emailInput: string, origin: string): Promise
               Yoyakuにログイン
             </a>
           </p>
-          <p>ボタンが開けない場合は、以下のURLをブラウザに貼り付けてください。</p>
+          <p>ボタンが開かない場合は、以下のURLをブラウザに貼り付けてください。</p>
           <p style="word-break: break-all; color: #5f7f52;">${actionLink}</p>
         </div>
       `
