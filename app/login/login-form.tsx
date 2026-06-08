@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Mail } from "lucide-react";
+import { Loader2, Mail } from "lucide-react";
 import { sendLoginLink } from "@/lib/auth-actions";
 
 export function LoginForm() {
@@ -13,7 +13,7 @@ export function LoginForm() {
   async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!isConfigured) {
-      setMessage("Supabaseの環境変数を設定してからログインできます。");
+      setMessage("Supabase の環境変数を設定してからログインできます。");
       return;
     }
 
@@ -49,12 +49,8 @@ export function LoginForm() {
         disabled={isSubmitting || !isConfigured}
         type="submit"
       >
-        <Mail size={18} />
-        {isSubmitting
-          ? "送信中..."
-          : !isConfigured
-            ? "Supabase設定が必要です"
-            : "ログインリンクを送る"}
+        {isSubmitting ? <Loader2 className="animate-spin" size={18} /> : <Mail size={18} />}
+        {isSubmitting ? "送信中..." : !isConfigured ? "Supabase 設定が必要です" : "ログインリンクを送る"}
       </button>
       {message ? <p className="rounded-md bg-white px-3 py-2 text-sm text-sumi shadow-soft">{message}</p> : null}
     </form>

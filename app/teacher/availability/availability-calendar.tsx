@@ -1,8 +1,10 @@
 "use client";
 
-import { Plus, Save, Trash2 } from "lucide-react";
+import { Loader2, Plus, Save, Trash2 } from "lucide-react";
 import { useMemo, useState } from "react";
+import { useFormStatus } from "react-dom";
 import { availabilityIssueMessages, validateAvailabilitySlots } from "@/lib/availability-validation";
+import { LESSON_DURATION_MINUTES } from "@/lib/constants";
 import { isJapanHoliday } from "@/lib/japan-holidays";
 import { buildMonthCalendarDates, formatDateJa, getWeekdayFromDateKey, parseTimeToMinutes, toTimeValue } from "@/lib/time";
 import type { DateAvailability } from "@/lib/types";
@@ -77,7 +79,7 @@ export function AvailabilityCalendar({
     }
 
     const startTime = date === todayKey ? defaultStartTime : "18:00";
-    const endTime = addMinutesToTime(startTime, 60);
+    const endTime = addMinutesToTime(startTime, LESSON_DURATION_MINUTES);
 
     setSelectedDate(date);
     setRows((current) => [
@@ -150,14 +152,22 @@ export function AvailabilityCalendar({
           todayKey={todayKey}
         />
       </div>
-      <button
-        className="inline-flex items-center gap-2 rounded-md bg-ink px-4 py-3 font-medium text-white disabled:cursor-not-allowed disabled:bg-sumi/35"
-        disabled={validationIssues.length > 0}
-      >
-        <Save size={18} />
-        保存する
-      </button>
+      <SaveButton hasValidationIssues={validationIssues.length > 0} />
     </form>
+  );
+}
+
+function SaveButton({ hasValidationIssues }: { hasValidationIssues: boolean }) {
+  const { pending } = useFormStatus();
+
+  return (
+    <button
+      className="inline-flex items-center gap-2 rounded-md bg-ink px-4 py-3 font-medium text-white disabled:cursor-not-allowed disabled:bg-sumi/35"
+      disabled={hasValidationIssues || pending}
+    >
+      {pending ? <Loader2 className="animate-spin" size={18} /> : <Save size={18} />}
+      {pending ? "保存中..." : "保存する"}
+    </button>
   );
 }
 
@@ -217,8 +227,7 @@ function MonthSection({
             <div
               className={[
                 "min-h-28 border-b border-r border-ink/10 p-3 text-left transition",
-                dayTone.cellClass,
-                isPast ? "bg-ink/[0.03] text-sumi/45" : "",
+                isPast ? "bg-sumi/[0.06] text-sumi/40" : dayTone.cellClass,
                 isSelected ? "ring-2 ring-inset ring-matcha" : ""
               ].join(" ")}
               key={date}
@@ -230,14 +239,17 @@ function MonthSection({
                   onClick={() => onSelect(date)}
                   type="button"
                 >
-                  <span className={isToday ? "text-lg font-semibold text-matcha" : `text-lg font-medium ${dayTone.dateClass}`}>
+                  <span
+                    className={
+                      isPast
+                        ? "text-lg font-medium text-sumi/40"
+                        : isToday
+                          ? "text-lg font-semibold text-matcha"
+                          : `text-lg font-medium ${dayTone.dateClass}`
+                    }
+                  >
                     {date.slice(-2)}
                   </span>
-                  {dayTone.isHoliday ? (
-                    <span className="ml-1 inline-flex shrink-0 rounded bg-sakura/10 px-1.5 py-0.5 text-[11px] font-medium leading-none text-sakura">
-                      祝
-                    </span>
-                  ) : null}
                 </button>
                 {canAdd ? (
                   <button
@@ -251,13 +263,19 @@ function MonthSection({
                 ) : null}
               </div>
               <button
-                className="mt-4 w-full text-left text-sm text-sumi/65 disabled:text-sumi/45"
+                className="mt-4 w-full text-left text-sm text-sumi/65 disabled:text-sumi/40"
                 disabled={isPast}
                 onClick={() => onSelect(date)}
                 type="button"
               >
                 {rows.length > 0 ? (
-                  <span className="inline-flex rounded-md bg-matcha/10 px-2 py-1 text-xs font-medium text-matcha">
+                  <span
+                    className={
+                      isPast
+                        ? "inline-flex rounded-md bg-sumi/10 px-2 py-1 text-xs font-medium text-sumi/45"
+                        : "inline-flex rounded-md bg-matcha/10 px-2 py-1 text-xs font-medium text-matcha"
+                    }
+                  >
                     設定済み {rows.length} 件
                   </span>
                 ) : (
@@ -365,7 +383,7 @@ function SlotEditor({ currentTime, defaultStartTime, invalid, onRemove, onUpdate
 
   if (!editable) {
     return (
-      <div className="rounded-md bg-white px-3 py-2 text-sm text-sumi/65">
+      <div className="rounded-md bg-sumi/[0.06] px-3 py-2 text-sm text-sumi/45">
         {row.start_time}-{row.end_time}
       </div>
     );

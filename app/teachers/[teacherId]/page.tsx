@@ -1,25 +1,38 @@
-import { CalendarPlus, Clock, Video } from "lucide-react";
-import { createBooking } from "@/lib/actions";
-import { createClient } from "@/lib/supabase/server";
-import { hasSupabaseConfig } from "@/lib/supabase/config";
-import { formatDateTimeJa, generateSlotsFromDateAvailability, getCurrentAndNextMonthRange } from "@/lib/time";
+import { Video } from "lucide-react";
+import { BookingCalendar } from "@/app/teachers/[teacherId]/booking-calendar";
 import { EmptyState } from "@/components/empty-state";
 import { StatusBanner } from "@/components/status-banner";
 import { SupabaseSetup } from "@/components/supabase-setup";
+import { hasSupabaseConfig } from "@/lib/supabase/config";
+import { createClient } from "@/lib/supabase/server";
+import {
+  formatTokyoDateKey,
+  generateSlotsFromDateAvailability,
+  getCurrentAndNextMonthRange,
+  listDatesBetween
+} from "@/lib/time";
+import type { UserRole } from "@/lib/types";
 
 type TeacherPageProps = {
   params: Promise<{ teacherId: string }>;
-  searchParams: Promise<{ error?: string }>;
+  searchParams: Promise<{ booked?: string; error?: string }>;
 };
 
 export default async function TeacherPage({ params, searchParams }: TeacherPageProps) {
   const { teacherId } = await params;
-  const { error } = await searchParams;
+  const { booked, error } = await searchParams;
   if (!hasSupabaseConfig()) {
     return <SupabaseSetup />;
   }
 
   const supabase = await createClient();
+  const {
+    data: { user }
+  } = await supabase.auth.getUser();
+  const { data: profile } = user
+    ? await supabase.from("profiles").select("role").eq("id", user.id).single()
+    : { data: null };
+  const viewerRole = (profile?.role as UserRole | undefined) ?? null;
   const { data: teacher } = await supabase
     .from("teachers")
     .select("user_id, display_name, bio, meeting_url")
@@ -30,7 +43,8 @@ export default async function TeacherPage({ params, searchParams }: TeacherPageP
     return <EmptyState title="講師が見つかりません">講師一覧からもう一度選択してください。</EmptyState>;
   }
 
-  const { currentMonthStart, nextMonthEnd } = getCurrentAndNextMonthRange();
+  const now = new Date();
+  const { currentMonthStart, nextMonthStart, nextMonthEnd } = getCurrentAndNextMonthRange(now);
   const [{ data: availability }, { data: bookings }] = await Promise.all([
     supabase
       .from("date_availability")
@@ -44,12 +58,19 @@ export default async function TeacherPage({ params, searchParams }: TeacherPageP
       .from("bookings")
       .select("starts_at, status")
       .eq("teacher_id", teacherId)
-      .gte("starts_at", new Date().toISOString())
+      .gte("starts_at", now.toISOString())
   ]);
-  const slots = generateSlotsFromDateAvailability(availability ?? [], bookings ?? []);
+  const dates = listDatesBetween(currentMonthStart, nextMonthEnd);
+  const slots = generateSlotsFromDateAvailability(availability ?? [], bookings ?? [], now);
+  const errorMessage =
+    error === "student-required"
+      ? "予約するには学生アカウントでログインしてください。"
+      : error === "slot-unavailable"
+        ? "この時間は予約できません。別の枠を選んでください。"
+        : undefined;
 
   return (
-    <div className="grid gap-7 lg:grid-cols-[1fr_1.25fr]">
+    <div className="grid gap-7 lg:grid-cols-[minmax(320px,0.75fr)_minmax(0,1.35fr)]">
       <section className="rounded-lg border border-ink/10 bg-white p-6 shadow-soft">
         <p className="text-sm font-medium text-matcha">講師プロフィール</p>
         <h1 className="mt-2 text-3xl font-semibold text-ink">{teacher.display_name}</h1>
@@ -62,40 +83,22 @@ export default async function TeacherPage({ params, searchParams }: TeacherPageP
         ) : null}
       </section>
 
-      <section className="space-y-4">
+      <section className="min-w-0 space-y-4">
         <div>
           <p className="text-sm font-medium text-matcha">空き時間</p>
           <h2 className="mt-2 text-2xl font-semibold text-ink">今月・来月の予約枠</h2>
         </div>
-        <StatusBanner
-          message={error === "slot-unavailable" ? "この時間は予約できません。別の枠を選んでください。" : undefined}
-          tone="error"
-        />
+        <StatusBanner message={booked ? "予約が完了しました。予約一覧でも確認できます。" : undefined} />
+        <StatusBanner message={errorMessage} tone="error" />
 
-        {slots.length > 0 ? (
-          <div className="grid gap-3 sm:grid-cols-2">
-            {slots.map((slot) => (
-              <form
-                action={createBooking.bind(null, teacher.user_id, slot.startsAt)}
-                className="rounded-lg border border-ink/10 bg-white p-4 shadow-soft"
-                key={slot.startsAt}
-              >
-                <p className="flex items-center gap-2 font-medium text-ink">
-                  <Clock size={17} />
-                  {formatDateTimeJa(slot.startsAt)}
-                </p>
-                <button className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-md bg-ink px-3 py-2 text-sm font-medium text-white">
-                  <CalendarPlus size={17} />
-                  予約する
-                </button>
-              </form>
-            ))}
-          </div>
-        ) : (
-          <EmptyState title="予約できる時間がありません">
-            講師の空き時間が追加されるまでお待ちください。
-          </EmptyState>
-        )}
+        <BookingCalendar
+          dates={dates}
+          nextMonthStart={nextMonthStart}
+          slots={slots}
+          teacherId={teacher.user_id}
+          todayKey={formatTokyoDateKey(now)}
+          viewerRole={viewerRole}
+        />
       </section>
     </div>
   );
