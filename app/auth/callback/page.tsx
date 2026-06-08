@@ -16,6 +16,14 @@ function toLoginError(message: string) {
   return `/login?error=${encodeURIComponent(message)}`;
 }
 
+function getSafeNextPath(value: string | null) {
+  if (!value || !value.startsWith("/") || value.startsWith("//")) {
+    return "/student/bookings?login=1";
+  }
+
+  return value;
+}
+
 export default function AuthCallbackPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -27,8 +35,10 @@ export default function AuthCallbackPage() {
     async function finishLogin() {
       const supabase = createClient();
       const hashParams = getHashParams();
-      const next = searchParams.get("next") || "/student/bookings?login=1";
+      const next = getSafeNextPath(searchParams.get("next"));
       const code = searchParams.get("code");
+      const accessToken = hashParams.get("access_token");
+      const refreshToken = hashParams.get("refresh_token");
       const errorDescription = searchParams.get("error_description") || hashParams.get("error_description");
       const errorCode = searchParams.get("error_code") || hashParams.get("error_code");
 
@@ -51,6 +61,16 @@ export default function AuthCallbackPage() {
             return;
           }
 
+          router.replace(toLoginError(error.message));
+          return;
+        }
+      } else if (accessToken && refreshToken) {
+        const { error } = await supabase.auth.setSession({
+          access_token: accessToken,
+          refresh_token: refreshToken
+        });
+
+        if (error) {
           router.replace(toLoginError(error.message));
           return;
         }
