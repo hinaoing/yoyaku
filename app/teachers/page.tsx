@@ -1,16 +1,16 @@
 import Link from "next/link";
 import { ArrowRight, Video } from "lucide-react";
-import { createClient } from "@/lib/supabase/server";
 import { hasSupabaseConfig } from "@/lib/supabase/config";
 import { EmptyState } from "@/components/empty-state";
 import { SupabaseSetup } from "@/components/supabase-setup";
+import { requireUser } from "@/lib/supabase/auth";
 
 export default async function TeachersPage() {
   if (!hasSupabaseConfig()) {
     return <SupabaseSetup />;
   }
 
-  const supabase = await createClient();
+  const { supabase } = await requireUser();
   const { data: teachers } = await supabase
     .from("teachers")
     .select("user_id, display_name, bio, meeting_url")

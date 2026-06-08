@@ -4,7 +4,7 @@ import { EmptyState } from "@/components/empty-state";
 import { StatusBanner } from "@/components/status-banner";
 import { SupabaseSetup } from "@/components/supabase-setup";
 import { hasSupabaseConfig } from "@/lib/supabase/config";
-import { createClient } from "@/lib/supabase/server";
+import { requireUser } from "@/lib/supabase/auth";
 import {
   formatTokyoDateKey,
   generateSlotsFromDateAvailability,
@@ -25,10 +25,7 @@ export default async function TeacherPage({ params, searchParams }: TeacherPageP
     return <SupabaseSetup />;
   }
 
-  const supabase = await createClient();
-  const {
-    data: { user }
-  } = await supabase.auth.getUser();
+  const { supabase, user } = await requireUser();
   const { data: profile } = user
     ? await supabase.from("profiles").select("role").eq("id", user.id).single()
     : { data: null };
