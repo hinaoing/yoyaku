@@ -55,7 +55,6 @@ export function LoginForm() {
       size: "flexible",
       callback: (token) => {
         setTurnstileToken(token);
-        setMessage(null);
       },
       "expired-callback": () => {
         setTurnstileToken("");
