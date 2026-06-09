@@ -4,6 +4,7 @@ import { CalendarCheck, GraduationCap } from "lucide-react";
 import "./globals.css";
 import { createClient } from "@/lib/supabase/server";
 import { hasSupabaseConfig } from "@/lib/supabase/config";
+import type { UserRole } from "@/lib/types";
 
 export const metadata: Metadata = {
   title: "Yoyaku",
@@ -15,9 +16,29 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const user = hasSupabaseConfig()
-    ? (await (await createClient()).auth.getUser()).data.user
-    : null;
+  let user: Awaited<ReturnType<Awaited<ReturnType<typeof createClient>>["auth"]["getUser"]>>["data"]["user"] = null;
+  let role: UserRole | null = null;
+
+  if (hasSupabaseConfig()) {
+    try {
+      const supabase = await createClient();
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      user = authUser;
+
+      if (user) {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("role")
+          .eq("id", user.id)
+          .single();
+        role = (profile?.role as UserRole) ?? null;
+      }
+    } catch {
+      // Auth fetch failed — render as unauthenticated
+    }
+  }
+
+  const isTeacher = role === "teacher";
 
   return (
     <html lang="ja">
@@ -34,12 +55,16 @@ export default async function RootLayout({
               <Link className="rounded-md px-3 py-2 hover:bg-ink/5" href="/teachers">
                 講師を探す
               </Link>
-              <Link className="rounded-md px-3 py-2 hover:bg-ink/5" href="/student/bookings">
-                予約
-              </Link>
-              <Link className="rounded-md px-3 py-2 hover:bg-ink/5" href="/teacher/bookings">
-                講師
-              </Link>
+              {(!user || !isTeacher) && (
+                <Link className="rounded-md px-3 py-2 hover:bg-ink/5" href="/student/bookings">
+                  予約
+                </Link>
+              )}
+              {isTeacher && (
+                <Link className="rounded-md px-3 py-2 hover:bg-ink/5" href="/teacher/bookings">
+                  講師
+                </Link>
+              )}
               {user ? (
                 <div className="flex items-center gap-2">
                   <span className="hidden max-w-40 truncate rounded-md bg-matcha/10 px-3 py-2 text-matcha sm:inline">

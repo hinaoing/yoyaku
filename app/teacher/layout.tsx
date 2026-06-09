@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { requireRole } from "@/lib/supabase/auth";
 
 const links = [
   { href: "/teacher/bookings", label: "予約一覧" },
@@ -6,7 +7,9 @@ const links = [
   { href: "/teacher/settings", label: "設定" }
 ];
 
-export default function TeacherLayout({ children }: { children: React.ReactNode }) {
+export default async function TeacherLayout({ children }: { children: React.ReactNode }) {
+  await requireRole("teacher");
+
   return (
     <div className="grid gap-6 lg:grid-cols-[190px_minmax(0,1fr)]">
       <aside className="h-fit rounded-lg border border-ink/10 bg-white p-2 shadow-soft">
