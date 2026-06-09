@@ -66,7 +66,7 @@ export async function POST(request: Request, { params }: BookingRouteContext) {
   }
 
   const endsAt = addMinutesIso(startsAt, LESSON_DURATION_MINUTES);
-  const { error } = await supabase.from("bookings").insert({
+  const { error } = await adminSupabase.from("bookings").insert({
     teacher_id: teacherId,
     student_id: user.id,
     starts_at: startsAt,

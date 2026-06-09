@@ -11,6 +11,7 @@ import {
 } from "@/lib/time";
 import { validateAvailabilitySlots } from "@/lib/availability-validation";
 import type { AvailabilityInput } from "@/lib/types";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { requireRole, requireUser } from "@/lib/supabase/auth";
 
 function ensureTime(value: FormDataEntryValue | null) {
@@ -18,10 +19,11 @@ function ensureTime(value: FormDataEntryValue | null) {
 }
 
 export async function createBooking(teacherId: string, startsAt: string) {
-  const { supabase, user } = await requireRole("student");
+  const { user } = await requireRole("student");
+  const adminSupabase = createAdminClient();
   const endsAt = addMinutesIso(startsAt, LESSON_DURATION_MINUTES);
 
-  const { error } = await supabase.from("bookings").insert({
+  const { error } = await adminSupabase.from("bookings").insert({
     teacher_id: teacherId,
     student_id: user.id,
     starts_at: startsAt,
@@ -58,10 +60,14 @@ export async function cancelBooking(bookingId: string) {
     redirect(`/student/bookings?error=cutoff&hours=${CANCEL_CUTOFF_HOURS}`);
   }
 
-  await supabase
+  const { error: cancelError } = await supabase
     .from("bookings")
     .update({ status: "canceled", canceled_at: new Date().toISOString() })
     .eq("id", bookingId);
+
+  if (cancelError) {
+    redirect("/student/bookings?error=cancel");
+  }
 
   revalidatePath("/student/bookings");
   revalidatePath("/teacher/bookings");
