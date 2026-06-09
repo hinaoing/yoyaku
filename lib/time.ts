@@ -151,7 +151,7 @@ export function generateSlotsFromDateAvailability(
   now = new Date()
 ): Slot[] {
   const bookedStarts = new Set(
-    bookings.filter((booking) => booking.status === "confirmed").map((booking) => booking.starts_at)
+    bookings.filter((booking) => booking.status === "confirmed").map((booking) => new Date(booking.starts_at).toISOString())
   );
   const slots: Slot[] = [];
 

@@ -1,6 +1,7 @@
 import { revalidatePath } from "next/cache";
 import { NextResponse } from "next/server";
 import { LESSON_DURATION_MINUTES } from "@/lib/constants";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { addMinutesIso, formatTokyoDateKey, generateSlotsFromDateAvailability, getCurrentAndNextMonthRange } from "@/lib/time";
 
@@ -37,6 +38,7 @@ export async function POST(request: Request, { params }: BookingRouteContext) {
   }
 
   const now = new Date();
+  const adminSupabase = createAdminClient();
   const slotDate = formatTokyoDateKey(new Date(startsAt));
   const { currentMonthStart, nextMonthEnd } = getCurrentAndNextMonthRange(now);
 
@@ -50,10 +52,11 @@ export async function POST(request: Request, { params }: BookingRouteContext) {
       .select("*")
       .eq("teacher_id", teacherId)
       .eq("availability_date", slotDate),
-    supabase
+    adminSupabase
       .from("bookings")
       .select("starts_at, status")
       .eq("teacher_id", teacherId)
+      .eq("status", "confirmed")
       .gte("starts_at", now.toISOString())
   ]);
   const availableStarts = new Set(generateSlotsFromDateAvailability(availability ?? [], bookings ?? [], now).map((slot) => slot.startsAt));

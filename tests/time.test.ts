@@ -110,6 +110,27 @@ describe("generateSlotsFromDateAvailability", () => {
     expect(slots.map((slot) => slot.startsAt)).toEqual(["2026-05-04T09:30:00.000Z"]);
   });
 
+  it("excludes booked slots when database timestamps use timezone offsets", () => {
+    const now = new Date("2026-05-04T00:00:00+09:00");
+    const availability: DateAvailability[] = [
+      {
+        teacher_id: "teacher-1",
+        availability_date: "2026-05-04",
+        start_time: "18:00",
+        end_time: "19:00"
+      }
+    ];
+    const bookings = [
+      {
+        starts_at: "2026-05-04T09:00:00+00:00",
+        status: "confirmed"
+      }
+    ] as Pick<Booking, "starts_at" | "status">[];
+    const slots = generateSlotsFromDateAvailability(availability, bookings, now);
+
+    expect(slots.map((slot) => slot.startsAt)).toEqual(["2026-05-04T09:30:00.000Z"]);
+  });
+
   it("does not generate slots from non-30-minute availability boundaries", () => {
     const now = new Date("2026-05-04T00:00:00+09:00");
     const availability: DateAvailability[] = [

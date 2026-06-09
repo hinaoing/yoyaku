@@ -5,6 +5,7 @@ import { StatusBanner } from "@/components/status-banner";
 import { SupabaseSetup } from "@/components/supabase-setup";
 import { hasSupabaseConfig } from "@/lib/supabase/config";
 import { requireUser } from "@/lib/supabase/auth";
+import { createAdminClient } from "@/lib/supabase/admin";
 import {
   formatTokyoDateKey,
   generateSlotsFromDateAvailability,
@@ -41,6 +42,7 @@ export default async function TeacherPage({ params, searchParams }: TeacherPageP
   }
 
   const now = new Date();
+  const adminSupabase = createAdminClient();
   const { currentMonthStart, nextMonthStart, nextMonthEnd } = getCurrentAndNextMonthRange(now);
   const [{ data: availability }, { data: bookings }] = await Promise.all([
     supabase
@@ -51,10 +53,11 @@ export default async function TeacherPage({ params, searchParams }: TeacherPageP
       .lte("availability_date", nextMonthEnd)
       .order("availability_date")
       .order("start_time"),
-    supabase
+    adminSupabase
       .from("bookings")
       .select("starts_at, status")
       .eq("teacher_id", teacherId)
+      .eq("status", "confirmed")
       .gte("starts_at", now.toISOString())
   ]);
   const dates = listDatesBetween(currentMonthStart, nextMonthEnd);
