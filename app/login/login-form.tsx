@@ -5,6 +5,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Loader2, Mail } from "lucide-react";
 import { sendLoginLink } from "@/lib/auth-actions";
 
+const RESEND_COOLDOWN_SECONDS = 60;
+
 type TurnstileRenderOptions = {
   sitekey: string;
   theme?: "auto" | "light" | "dark";
@@ -30,6 +32,7 @@ export function LoginForm() {
   const [message, setMessage] = useState<string | null>(null);
   const [turnstileToken, setTurnstileToken] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [cooldownSeconds, setCooldownSeconds] = useState(0);
   const turnstileContainerRef = useRef<HTMLDivElement | null>(null);
   const turnstileWidgetIdRef = useRef<string | null>(null);
   const isConfigured = Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
@@ -71,8 +74,27 @@ export function LoginForm() {
     renderTurnstile();
   }, [renderTurnstile]);
 
+  useEffect(() => {
+    if (cooldownSeconds <= 0) {
+      return;
+    }
+
+    const timer = window.setInterval(() => {
+      setCooldownSeconds((current) => Math.max(0, current - 1));
+    }, 1000);
+
+    return () => {
+      window.clearInterval(timer);
+    };
+  }, [cooldownSeconds]);
+
   async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+
+    if (cooldownSeconds > 0) {
+      return;
+    }
+
     if (!isConfigured) {
       setMessage("Supabase の環境変数を設定してからログインできます。");
       return;
@@ -102,6 +124,7 @@ export function LoginForm() {
     }
 
     setMessage(`${result.message} メール内のリンクを開いてください。`);
+    setCooldownSeconds(RESEND_COOLDOWN_SECONDS);
   }
 
   return (
@@ -138,17 +161,19 @@ export function LoginForm() {
 
         <button
           className="inline-flex w-full items-center justify-center gap-2 rounded-md bg-ink px-4 py-3 font-medium text-white disabled:cursor-not-allowed disabled:opacity-60"
-          disabled={isSubmitting || !isConfigured || !isTurnstileConfigured}
+          disabled={isSubmitting || cooldownSeconds > 0 || !isConfigured || !isTurnstileConfigured}
           type="submit"
         >
           {isSubmitting ? <Loader2 className="animate-spin" size={18} /> : <Mail size={18} />}
           {isSubmitting
             ? "送信中..."
-            : !isConfigured
-              ? "Supabase 設定が必要です"
-              : !isTurnstileConfigured
-                ? "Turnstile 設定が必要です"
-                : "ログインリンクを送る"}
+            : cooldownSeconds > 0
+              ? `再送信まで ${cooldownSeconds} 秒`
+              : !isConfigured
+                ? "Supabase 設定が必要です"
+                : !isTurnstileConfigured
+                  ? "Turnstile 設定が必要です"
+                  : "ログインリンクを送る"}
         </button>
         {message ? <p className="rounded-md bg-white px-3 py-2 text-sm text-sumi shadow-soft">{message}</p> : null}
       </form>
