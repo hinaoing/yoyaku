@@ -3,7 +3,7 @@ import { cancelBooking } from "@/lib/actions";
 import { CANCEL_CUTOFF_HOURS } from "@/lib/constants";
 import { requireRole } from "@/lib/supabase/auth";
 import { hasSupabaseConfig } from "@/lib/supabase/config";
-import { canCancelBooking, formatDateTimeJa } from "@/lib/time";
+import { canCancelBooking, formatDateTimeJa, formatTimeJa } from "@/lib/time";
 import { EmptyState } from "@/components/empty-state";
 import { StatusBanner } from "@/components/status-banner";
 import { SupabaseSetup } from "@/components/supabase-setup";
@@ -64,7 +64,9 @@ export default async function StudentBookingsPage({ searchParams }: StudentBooki
                 <div className="flex flex-wrap items-start justify-between gap-4">
                   <div>
                     <p className="text-sm text-sumi/65">レッスン日時</p>
-                    <h2 className="mt-1 text-xl font-semibold text-ink">{formatDateTimeJa(booking.starts_at)}</h2>
+                    <h2 className="mt-1 text-xl font-semibold text-ink">
+                      {formatDateTimeJa(booking.starts_at)} - {formatTimeJa(booking.ends_at)}
+                    </h2>
                     <p className="mt-2 text-sumi">{teacher?.display_name ?? "講師"}</p>
                   </div>
                   {teacher?.meeting_url ? (

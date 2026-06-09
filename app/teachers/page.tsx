@@ -22,7 +22,7 @@ export default async function TeachersPage() {
         <p className="text-sm font-medium text-matcha">講師一覧</p>
         <h1 className="max-w-2xl text-3xl font-semibold text-ink">オンラインレッスンを予約する</h1>
         <p className="max-w-2xl text-sumi/75">
-          希望する講師を選び、空いている30分枠から予約できます。予約はすぐに確定します。
+          希望する講師を選び、空いている25分枠から予約できます。予約はすぐに確定します。
         </p>
       </section>
 

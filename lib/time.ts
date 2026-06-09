@@ -1,4 +1,10 @@
-import { APP_TIME_ZONE, CANCEL_CUTOFF_HOURS, LESSON_DURATION_MINUTES, WEEKDAYS_JA } from "@/lib/constants";
+import {
+  APP_TIME_ZONE,
+  BOOKING_START_INTERVAL_MINUTES,
+  CANCEL_CUTOFF_HOURS,
+  LESSON_DURATION_MINUTES,
+  WEEKDAYS_JA
+} from "@/lib/constants";
 import type { Booking, DateAvailability, Slot } from "@/lib/types";
 
 const dateFormatter = new Intl.DateTimeFormat("ja-JP", {
@@ -106,7 +112,7 @@ export function roundUpToNextLessonTime(now = new Date()) {
   const hour = Number(hourPart);
   const minute = Number(minutePart);
   const total = hour * 60 + minute;
-  const rounded = Math.ceil((total + 1) / LESSON_DURATION_MINUTES) * LESSON_DURATION_MINUTES;
+  const rounded = Math.ceil((total + 1) / BOOKING_START_INTERVAL_MINUTES) * BOOKING_START_INTERVAL_MINUTES;
 
   if (rounded >= 24 * 60) {
     return "23:30";
@@ -160,14 +166,14 @@ export function generateSlotsFromDateAvailability(
     const endMinutes = parseTimeToMinutes(rule.end_time);
     const weekday = getWeekdayFromDateKey(rule.availability_date);
 
-    if (startMinutes % LESSON_DURATION_MINUTES !== 0 || endMinutes % LESSON_DURATION_MINUTES !== 0) {
+    if (startMinutes % BOOKING_START_INTERVAL_MINUTES !== 0 || endMinutes % BOOKING_START_INTERVAL_MINUTES !== 0) {
       continue;
     }
 
     for (
       let minutes = startMinutes;
       minutes + LESSON_DURATION_MINUTES <= endMinutes;
-      minutes += LESSON_DURATION_MINUTES
+      minutes += BOOKING_START_INTERVAL_MINUTES
     ) {
       const startsAt = tokyoDateTimeToUtcIso(rule.availability_date, toTimeValue(minutes));
       const endsAt = addMinutesIso(startsAt, LESSON_DURATION_MINUTES);

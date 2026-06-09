@@ -4,7 +4,7 @@ import { Loader2, Plus, Save, Trash2 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { availabilityIssueMessages, validateAvailabilitySlots } from "@/lib/availability-validation";
-import { LESSON_DURATION_MINUTES } from "@/lib/constants";
+import { BOOKING_START_INTERVAL_MINUTES } from "@/lib/constants";
 import { isJapanHoliday } from "@/lib/japan-holidays";
 import { buildMonthCalendarDates, formatDateJa, getWeekdayFromDateKey, parseTimeToMinutes, toTimeValue } from "@/lib/time";
 import type { DateAvailability } from "@/lib/types";
@@ -79,7 +79,7 @@ export function AvailabilityCalendar({
     }
 
     const startTime = date === todayKey ? defaultStartTime : "18:00";
-    const endTime = addMinutesToTime(startTime, LESSON_DURATION_MINUTES);
+    const endTime = addMinutesToTime(startTime, BOOKING_START_INTERVAL_MINUTES);
 
     setSelectedDate(date);
     setRows((current) => [

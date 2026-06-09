@@ -82,10 +82,10 @@ describe("generateSlotsFromDateAvailability", () => {
     ];
     const slots = generateSlotsFromDateAvailability(availability, [], now);
 
-    expect(slots.map((slot) => slot.startsAt)).toEqual([
-      "2026-05-04T01:00:00.000Z",
-      "2026-05-04T01:30:00.000Z",
-      "2026-05-04T09:00:00.000Z"
+    expect(slots.map((slot) => [slot.startsAt, slot.endsAt])).toEqual([
+      ["2026-05-04T01:00:00.000Z", "2026-05-04T01:25:00.000Z"],
+      ["2026-05-04T01:30:00.000Z", "2026-05-04T01:55:00.000Z"],
+      ["2026-05-04T09:00:00.000Z", "2026-05-04T09:25:00.000Z"]
     ]);
   });
 
@@ -107,7 +107,9 @@ describe("generateSlotsFromDateAvailability", () => {
     ] as Pick<Booking, "starts_at" | "status">[];
     const slots = generateSlotsFromDateAvailability(availability, bookings, now);
 
-    expect(slots.map((slot) => slot.startsAt)).toEqual(["2026-05-04T09:30:00.000Z"]);
+    expect(slots.map((slot) => [slot.startsAt, slot.endsAt])).toEqual([
+      ["2026-05-04T09:30:00.000Z", "2026-05-04T09:55:00.000Z"]
+    ]);
   });
 
   it("excludes booked slots when database timestamps use timezone offsets", () => {
@@ -128,10 +130,12 @@ describe("generateSlotsFromDateAvailability", () => {
     ] as Pick<Booking, "starts_at" | "status">[];
     const slots = generateSlotsFromDateAvailability(availability, bookings, now);
 
-    expect(slots.map((slot) => slot.startsAt)).toEqual(["2026-05-04T09:30:00.000Z"]);
+    expect(slots.map((slot) => [slot.startsAt, slot.endsAt])).toEqual([
+      ["2026-05-04T09:30:00.000Z", "2026-05-04T09:55:00.000Z"]
+    ]);
   });
 
-  it("does not generate slots from non-30-minute availability boundaries", () => {
+  it("does not generate slots from non-30-minute start interval boundaries", () => {
     const now = new Date("2026-05-04T00:00:00+09:00");
     const availability: DateAvailability[] = [
       {
