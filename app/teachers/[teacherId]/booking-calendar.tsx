@@ -78,7 +78,7 @@ export function BookingCalendar({ dates, nextMonthStart, slots, teacherId, today
           {currentMonthLabel}
           {currentMonthSlotCount > 0 && (
             <span className="rounded-full bg-matcha/10 px-2 py-0.5 text-xs font-medium text-matcha">
-              {currentMonthSlotCount}
+              {currentMonthSlotCount}件
             </span>
           )}
         </button>
@@ -95,7 +95,7 @@ export function BookingCalendar({ dates, nextMonthStart, slots, teacherId, today
           {nextMonthLabel}
           {nextMonthSlotCount > 0 && (
             <span className="rounded-full bg-matcha/10 px-2 py-0.5 text-xs font-medium text-matcha">
-              {nextMonthSlotCount}
+              {nextMonthSlotCount}件
             </span>
           )}
         </button>
