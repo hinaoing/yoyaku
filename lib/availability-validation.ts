@@ -17,10 +17,11 @@ type AvailabilityValidationOptions = {
   startDate: string;
 };
 
-const TIME_PATTERN = /^([01]\d|2[0-3]):(00|30)$/;
+const TIME_PATTERN = /^([01]\d|2[0-3]):[0-5]\d$/;
+const HALF_HOUR_TIME_PATTERN = /^([01]\d|2[0-3]):(00|30)$/;
 
 export function isHalfHourTimeValue(value: string) {
-  return TIME_PATTERN.test(value);
+  return HALF_HOUR_TIME_PATTERN.test(value);
 }
 
 export function validateAvailabilitySlots(
@@ -32,7 +33,7 @@ export function validateAvailabilitySlots(
 
   for (const slot of slots) {
     const dateIsValid = /^\d{4}-\d{2}-\d{2}$/.test(slot.availability_date);
-    const timeIsValid = isHalfHourTimeValue(slot.start_time) && isHalfHourTimeValue(slot.end_time);
+    const timeIsValid = isHalfHourTimeValue(slot.start_time) && TIME_PATTERN.test(slot.end_time);
 
     if (!dateIsValid) {
       issues.push({ code: "invalid-date", key: slot.key, message: "日付が正しくありません。" });
@@ -45,7 +46,7 @@ export function validateAvailabilitySlots(
     }
 
     if (!timeIsValid) {
-      issues.push({ code: "invalid-time", key: slot.key, message: "時間は30分単位で設定してください。" });
+      issues.push({ code: "invalid-time", key: slot.key, message: "開始時間は30分単位で設定してください。" });
       continue;
     }
 

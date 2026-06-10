@@ -89,6 +89,23 @@ describe("generateSlotsFromDateAvailability", () => {
     ]);
   });
 
+  it("expands a single 25-minute availability row into one slot", () => {
+    const now = new Date("2026-05-04T00:00:00+09:00");
+    const availability: DateAvailability[] = [
+      {
+        teacher_id: "teacher-1",
+        availability_date: "2026-05-04",
+        start_time: "18:00",
+        end_time: "18:25"
+      }
+    ];
+    const slots = generateSlotsFromDateAvailability(availability, [], now);
+
+    expect(slots.map((slot) => [slot.startsAt, slot.endsAt])).toEqual([
+      ["2026-05-04T09:00:00.000Z", "2026-05-04T09:25:00.000Z"]
+    ]);
+  });
+
   it("excludes already booked confirmed slots", () => {
     const now = new Date("2026-05-04T00:00:00+09:00");
     const availability: DateAvailability[] = [
@@ -223,8 +240,8 @@ describe("availability validation", () => {
   it("allows non-contiguous slots on the same day", () => {
     const issues = validateAvailabilitySlots(
       [
-        { availability_date: "2026-06-22", start_time: "09:00", end_time: "10:00" },
-        { availability_date: "2026-06-22", start_time: "18:00", end_time: "19:00" }
+        { availability_date: "2026-06-22", start_time: "09:00", end_time: "09:25" },
+        { availability_date: "2026-06-22", start_time: "18:00", end_time: "18:25" }
       ],
       options
     );

@@ -4,7 +4,7 @@ import { Loader2, Plus, Save, Trash2 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { availabilityIssueMessages, validateAvailabilitySlots } from "@/lib/availability-validation";
-import { BOOKING_START_INTERVAL_MINUTES } from "@/lib/constants";
+import { BOOKING_START_INTERVAL_MINUTES, LESSON_DURATION_MINUTES } from "@/lib/constants";
 import { isJapanHoliday } from "@/lib/japan-holidays";
 import { buildMonthCalendarDates, formatDateJa, getWeekdayFromDateKey, parseTimeToMinutes, toTimeValue } from "@/lib/time";
 import type { DateAvailability } from "@/lib/types";
@@ -81,23 +81,41 @@ export function AvailabilityCalendar({
       return;
     }
 
-    const startTime = date === todayKey ? defaultStartTime : "18:00";
-    const endTime = addMinutesToTime(startTime, BOOKING_START_INTERVAL_MINUTES);
-
     setSelectedDate(date);
-    setRows((current) => [
-      ...current,
-      {
-        key: `${date}-${crypto.randomUUID()}`,
-        availability_date: date,
-        start_time: startTime,
-        end_time: endTime
+    setRows((current) => {
+      const startTime = getNextStartTimeForDate(current, date, todayKey, defaultStartTime);
+      const endTime = addMinutesToTime(startTime, LESSON_DURATION_MINUTES);
+
+      if (current.some((row) => row.availability_date === date && row.start_time === startTime)) {
+        return current;
       }
-    ]);
+
+      return [
+        ...current,
+        {
+          key: `${date}-${crypto.randomUUID()}`,
+          availability_date: date,
+          start_time: startTime,
+          end_time: endTime
+        }
+      ];
+    });
   }
 
   function updateRow(key: string, field: "start_time" | "end_time", value: string) {
-    setRows((current) => current.map((row) => (row.key === key ? { ...row, [field]: value } : row)));
+    setRows((current) =>
+      current.map((row) => {
+        if (row.key !== key) {
+          return row;
+        }
+
+        if (field === "start_time") {
+          return { ...row, start_time: value, end_time: addMinutesToTime(value, LESSON_DURATION_MINUTES) };
+        }
+
+        return { ...row, [field]: value };
+      })
+    );
   }
 
   function removeRow(key: string) {
@@ -263,7 +281,7 @@ function MonthSection({
           const rows = groupedRows.get(date) ?? [];
           const isPast = date < todayKey;
           const isToday = date === todayKey;
-          const canAdd = date > todayKey || (isToday && currentTime < "23:00");
+          const canAdd = date > todayKey || (isToday && currentTime < "23:30");
           const isSelected = date === selectedDate;
           const dayTone = getDayTone(date);
 
@@ -360,7 +378,7 @@ function DayEditor({
   todayKey
 }: DayEditorProps) {
   const isPast = selectedDate < todayKey;
-  const canAdd = selectedDate > todayKey || (selectedDate === todayKey && currentTime < "23:00");
+  const canAdd = selectedDate > todayKey || (selectedDate === todayKey && currentTime < "23:30");
 
   return (
     <aside className="rounded-xl border border-ink/10 bg-paper/60 p-4 shadow-soft lg:sticky lg:top-24 lg:self-start">
@@ -435,7 +453,7 @@ function SlotEditor({ currentTime, defaultStartTime, invalid, onRemove, onUpdate
 
   return (
     <div className={invalid ? "rounded-lg border border-sakura/30 bg-sakura/[0.04] p-3" : "rounded-lg border border-ink/10 bg-white p-3"}>
-      <div className="grid grid-cols-[1fr_1fr_auto] items-end gap-2">
+      <div className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-end gap-3">
         <label className="grid gap-1 text-xs text-sumi">
           開始
           <TimeSelect
@@ -444,14 +462,12 @@ function SlotEditor({ currentTime, defaultStartTime, invalid, onRemove, onUpdate
             value={row.start_time}
           />
         </label>
-        <label className="grid gap-1 text-xs text-sumi">
+        <div className="grid gap-1 text-xs text-sumi">
           終了
-          <TimeSelect
-            min={minTime}
-            onChange={(value) => onUpdate(row.key, "end_time", value)}
-            value={row.end_time}
-          />
-        </label>
+          <div className="rounded-lg border border-ink/10 bg-paper/70 px-3 py-2 text-sm font-medium text-sumi/70">
+            {row.end_time}
+          </div>
+        </div>
         <button
           aria-label="削除"
           className="grid size-9 place-items-center rounded-lg border border-sakura/25 text-sakura/70 transition-all duration-150 hover:border-sakura/40 hover:bg-sakura/[0.06] hover:text-sakura"
@@ -504,6 +520,25 @@ function normalizeHour(hour: string) {
 
 function normalizeMinute(minute: string) {
   return minute === "30" ? "30" : "00";
+}
+
+function getNextStartTimeForDate(rows: Row[], date: string, todayKey: string, defaultStartTime: string) {
+  const baseStartTime = date === todayKey ? defaultStartTime : "18:00";
+  const baseStartMinutes = parseTimeToMinutes(baseStartTime);
+  const sameDayStarts = rows
+    .filter((row) => row.availability_date === date)
+    .map((row) => parseTimeToMinutes(row.start_time))
+    .filter((minutes) => Number.isFinite(minutes));
+
+  if (sameDayStarts.length === 0) {
+    return baseStartTime;
+  }
+
+  const latestStartMinutes =
+    Math.floor((24 * 60 - LESSON_DURATION_MINUTES) / BOOKING_START_INTERVAL_MINUTES) * BOOKING_START_INTERVAL_MINUTES;
+  const nextMinutes = Math.max(baseStartMinutes, Math.max(...sameDayStarts) + BOOKING_START_INTERVAL_MINUTES);
+
+  return toTimeValue(Math.min(nextMinutes, latestStartMinutes));
 }
 
 function getDayTone(date: string) {

@@ -166,7 +166,7 @@ export function generateSlotsFromDateAvailability(
     const endMinutes = parseTimeToMinutes(rule.end_time);
     const weekday = getWeekdayFromDateKey(rule.availability_date);
 
-    if (startMinutes % BOOKING_START_INTERVAL_MINUTES !== 0 || endMinutes % BOOKING_START_INTERVAL_MINUTES !== 0) {
+    if (startMinutes % BOOKING_START_INTERVAL_MINUTES !== 0 || endMinutes <= startMinutes) {
       continue;
     }
 
