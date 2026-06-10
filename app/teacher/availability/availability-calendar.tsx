@@ -28,6 +28,8 @@ type AvailabilityCalendarProps = {
 };
 
 const WEEKDAYS = ["日", "月", "火", "水", "木", "金", "土"];
+const TIME_HOURS = Array.from({ length: 24 }, (_, hour) => hour.toString().padStart(2, "0"));
+const TIME_MINUTES = ["00", "30"] as const;
 
 export function AvailabilityCalendar({
   dates,
@@ -436,23 +438,17 @@ function SlotEditor({ currentTime, defaultStartTime, invalid, onRemove, onUpdate
       <div className="grid grid-cols-[1fr_1fr_auto] items-end gap-2">
         <label className="grid gap-1 text-xs text-sumi">
           開始
-          <input
-            className="min-w-0 rounded-lg border border-ink/15 px-2 py-2 text-sm outline-none ring-matcha/30 transition-all duration-200 focus:border-matcha/50 focus:ring-4"
+          <TimeSelect
             min={minTime}
-            onChange={(event) => onUpdate(row.key, "start_time", event.target.value)}
-            step={1800}
-            type="time"
+            onChange={(value) => onUpdate(row.key, "start_time", value)}
             value={row.start_time}
           />
         </label>
         <label className="grid gap-1 text-xs text-sumi">
           終了
-          <input
-            className="min-w-0 rounded-lg border border-ink/15 px-2 py-2 text-sm outline-none ring-matcha/30 transition-all duration-200 focus:border-matcha/50 focus:ring-4"
+          <TimeSelect
             min={minTime}
-            onChange={(event) => onUpdate(row.key, "end_time", event.target.value)}
-            step={1800}
-            type="time"
+            onChange={(value) => onUpdate(row.key, "end_time", value)}
             value={row.end_time}
           />
         </label>
@@ -467,6 +463,47 @@ function SlotEditor({ currentTime, defaultStartTime, invalid, onRemove, onUpdate
       </div>
     </div>
   );
+}
+
+function TimeSelect({ min, onChange, value }: { min?: string; onChange: (value: string) => void; value: string }) {
+  const [rawHour = "00", rawMinute = "00"] = value.split(":");
+  const [minHour = "00", minMinute = "00"] = (min ?? "00:00").split(":");
+  const hour = normalizeHour(rawHour);
+  const minute = normalizeMinute(rawMinute);
+  const selectClass =
+    "min-w-0 rounded-lg border border-ink/15 bg-white px-2 py-2 text-sm outline-none ring-matcha/30 transition-all duration-200 focus:border-matcha/50 focus:ring-4";
+
+  function changeTime(part: "hour" | "minute", nextValue: string) {
+    onChange(part === "hour" ? `${nextValue}:${minute}` : `${hour}:${nextValue}`);
+  }
+
+  return (
+    <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-1">
+      <select className={selectClass} onChange={(event) => changeTime("hour", event.target.value)} value={hour}>
+        {TIME_HOURS.map((option) => (
+          <option disabled={min ? option < minHour : false} key={option} value={option}>
+            {option}
+          </option>
+        ))}
+      </select>
+      <span className="text-sm text-sumi/45">:</span>
+      <select className={selectClass} onChange={(event) => changeTime("minute", event.target.value)} value={minute}>
+        {TIME_MINUTES.map((option) => (
+          <option disabled={min ? hour === minHour && option < minMinute : false} key={option} value={option}>
+            {option}
+          </option>
+        ))}
+      </select>
+    </div>
+  );
+}
+
+function normalizeHour(hour: string) {
+  return TIME_HOURS.includes(hour) ? hour : "00";
+}
+
+function normalizeMinute(minute: string) {
+  return minute === "30" ? "30" : "00";
 }
 
 function getDayTone(date: string) {
