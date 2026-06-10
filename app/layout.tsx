@@ -88,9 +88,19 @@ export default async function RootLayout({
           </div>
         </header>
         <main className="mx-auto max-w-7xl px-5 py-8">{children}</main>
-        <footer className="mx-auto flex max-w-7xl items-center gap-2 border-t border-ink/5 px-5 pb-8 pt-6 text-sm text-sumi/60">
-          <GraduationCap size={16} />
-          オンラインレッスンの予約管理
+        <footer className="mx-auto flex max-w-7xl flex-col gap-3 border-t border-ink/5 px-5 pb-8 pt-6 text-sm text-sumi/60 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-2">
+            <GraduationCap size={16} />
+            オンラインレッスンの予約管理
+          </div>
+          <nav className="flex flex-wrap items-center gap-x-4 gap-y-2">
+            <Link className="transition-colors hover:text-ink" href="/terms">
+              ご利用規約
+            </Link>
+            <Link className="transition-colors hover:text-ink" href="/privacy">
+              プライバシーポリシー
+            </Link>
+          </nav>
         </footer>
       </body>
     </html>
