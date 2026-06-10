@@ -132,37 +132,47 @@ export function AvailabilityCalendar({
       ))}
 
       {/* Month tabs */}
-      <div className="flex gap-1 rounded-lg border border-ink/10 bg-paper/60 p-1">
+      <div className="flex gap-1 rounded-xl border border-ink/10 bg-paper/70 p-1 shadow-inner">
         <button
           className={[
-            "flex flex-1 items-center justify-center gap-2 rounded-md px-4 py-2.5 text-sm font-medium transition-all duration-200",
+            "flex flex-1 items-center justify-center gap-2 rounded-lg border px-4 py-2.5 text-sm font-semibold transition-all duration-200",
             activeTab === "current"
-              ? "bg-white text-ink shadow-sm"
-              : "text-sumi/60 hover:text-sumi"
+              ? "border-matcha bg-matcha text-white shadow-sm"
+              : "border-ink/10 bg-white/75 text-sumi/70 hover:border-matcha/30 hover:bg-matcha/[0.06] hover:text-ink"
           ].join(" ")}
           onClick={() => setActiveTab("current")}
           type="button"
         >
           {currentMonthLabel}
           {currentMonthSlotCount > 0 && (
-            <span className="rounded-full bg-matcha/10 px-2 py-0.5 text-xs font-medium text-matcha">
+            <span
+              className={[
+                "rounded-full px-2 py-0.5 text-xs font-semibold",
+                activeTab === "current" ? "bg-white/20 text-white" : "bg-matcha/10 text-matcha"
+              ].join(" ")}
+            >
               {currentMonthSlotCount}件
             </span>
           )}
         </button>
         <button
           className={[
-            "flex flex-1 items-center justify-center gap-2 rounded-md px-4 py-2.5 text-sm font-medium transition-all duration-200",
+            "flex flex-1 items-center justify-center gap-2 rounded-lg border px-4 py-2.5 text-sm font-semibold transition-all duration-200",
             activeTab === "next"
-              ? "bg-white text-ink shadow-sm"
-              : "text-sumi/60 hover:text-sumi"
+              ? "border-matcha bg-matcha text-white shadow-sm"
+              : "border-ink/10 bg-white/75 text-sumi/70 hover:border-matcha/30 hover:bg-matcha/[0.06] hover:text-ink"
           ].join(" ")}
           onClick={() => setActiveTab("next")}
           type="button"
         >
           {nextMonthLabel}
           {nextMonthSlotCount > 0 && (
-            <span className="rounded-full bg-matcha/10 px-2 py-0.5 text-xs font-medium text-matcha">
+            <span
+              className={[
+                "rounded-full px-2 py-0.5 text-xs font-semibold",
+                activeTab === "next" ? "bg-white/20 text-white" : "bg-matcha/10 text-matcha"
+              ].join(" ")}
+            >
               {nextMonthSlotCount}件
             </span>
           )}
