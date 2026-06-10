@@ -1,10 +1,13 @@
 import type { Metadata } from "next";
+import { Inter } from "next/font/google";
 import Link from "next/link";
 import { CalendarCheck, GraduationCap } from "lucide-react";
 import "./globals.css";
 import { createClient } from "@/lib/supabase/server";
 import { hasSupabaseConfig } from "@/lib/supabase/config";
 import type { UserRole } from "@/lib/types";
+
+const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 
 export const metadata: Metadata = {
   title: "Yoyaku",
@@ -41,27 +44,27 @@ export default async function RootLayout({
   const isTeacher = role === "teacher";
 
   return (
-    <html lang="ja">
-      <body>
-        <header className="border-b border-ink/10 bg-paper/85 backdrop-blur">
+    <html lang="ja" className={inter.variable}>
+      <body className={inter.className}>
+        <header className="sticky top-0 z-40 border-b border-ink/10 bg-paper/80 backdrop-blur-md">
           <div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-4">
-            <Link className="flex items-center gap-2 font-semibold tracking-normal text-ink" href="/">
-              <span className="grid size-9 place-items-center rounded-md bg-matcha text-white">
+            <Link className="group flex items-center gap-2 font-semibold tracking-normal text-ink" href="/">
+              <span className="grid size-9 place-items-center rounded-md bg-matcha text-white transition-transform duration-150 group-hover:scale-105">
                 <CalendarCheck size={19} />
               </span>
               Yoyaku
             </Link>
-            <nav className="flex items-center gap-2 text-sm text-sumi">
-              <Link className="rounded-md px-3 py-2 hover:bg-ink/5" href="/teachers">
+            <nav className="flex items-center gap-1 text-sm text-sumi">
+              <Link className="rounded-md px-3 py-2 transition-colors duration-150 hover:bg-ink/5 hover:text-ink" href="/teachers">
                 講師を探す
               </Link>
               {(!user || !isTeacher) && (
-                <Link className="rounded-md px-3 py-2 hover:bg-ink/5" href="/student/bookings">
+                <Link className="rounded-md px-3 py-2 transition-colors duration-150 hover:bg-ink/5 hover:text-ink" href="/student/bookings">
                   予約
                 </Link>
               )}
               {isTeacher && (
-                <Link className="rounded-md px-3 py-2 hover:bg-ink/5" href="/teacher/bookings">
+                <Link className="rounded-md px-3 py-2 transition-colors duration-150 hover:bg-ink/5 hover:text-ink" href="/teacher/bookings">
                   講師
                 </Link>
               )}
@@ -71,13 +74,13 @@ export default async function RootLayout({
                     {user.email}
                   </span>
                   <form action="/auth/sign-out" method="post">
-                    <button className="rounded-md border border-ink/15 px-3 py-2 hover:bg-white" type="submit">
+                    <button className="rounded-md border border-ink/15 px-3 py-2 transition-colors duration-150 hover:border-ink/25 hover:bg-white" type="submit">
                       ログアウト
                     </button>
                   </form>
                 </div>
               ) : (
-                <Link className="rounded-md bg-ink px-3 py-2 text-white" href="/login">
+                <Link className="rounded-md bg-ink px-3 py-2 text-white transition-colors duration-150 hover:bg-sumi" href="/login">
                   ログイン
                 </Link>
               )}
@@ -85,7 +88,7 @@ export default async function RootLayout({
           </div>
         </header>
         <main className="mx-auto max-w-7xl px-5 py-8">{children}</main>
-        <footer className="mx-auto flex max-w-7xl items-center gap-2 px-5 pb-8 pt-2 text-sm text-sumi/70">
+        <footer className="mx-auto flex max-w-7xl items-center gap-2 border-t border-ink/5 px-5 pb-8 pt-6 text-sm text-sumi/60">
           <GraduationCap size={16} />
           オンラインレッスンの予約管理
         </footer>

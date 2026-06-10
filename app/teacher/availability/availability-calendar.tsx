@@ -106,7 +106,7 @@ export function AvailabilityCalendar({
   const selectedRows = groupedRows.get(selectedDate) ?? [];
 
   return (
-    <form action="/teacher/availability/save" className="space-y-5 rounded-lg border border-ink/10 bg-white p-4 shadow-soft" method="post">
+    <form action="/teacher/availability/save" className="space-y-5 rounded-xl border border-ink/10 bg-white p-5 shadow-soft" method="post">
       <input name="rangeStart" type="hidden" value={rangeStart} />
       <input name="rangeEnd" type="hidden" value={rangeEnd} />
       {editableRows.map((row) => (
@@ -162,7 +162,7 @@ function SaveButton({ hasValidationIssues }: { hasValidationIssues: boolean }) {
 
   return (
     <button
-      className="inline-flex items-center gap-2 rounded-md bg-ink px-4 py-3 font-medium text-white disabled:cursor-not-allowed disabled:bg-sumi/35"
+      className="inline-flex items-center gap-2 rounded-lg bg-ink px-5 py-3 font-medium text-white transition-all duration-200 hover:bg-sumi active:scale-[0.98] disabled:cursor-not-allowed disabled:bg-sumi/35 disabled:active:scale-100"
       disabled={hasValidationIssues || pending}
     >
       {pending ? <Loader2 className="animate-spin" size={18} /> : <Save size={18} />}
@@ -203,17 +203,17 @@ function MonthSection({
         <p className="text-sm font-medium text-matcha">{title}</p>
         <h2 className="text-2xl font-semibold text-ink">{monthLabel}</h2>
       </div>
-      <div className="grid grid-cols-7 border-l border-t border-ink/10 text-center text-sm font-medium text-sumi/65">
+      <div className="grid grid-cols-7 overflow-hidden rounded-t-lg border border-ink/10 text-center text-sm font-medium text-sumi/60">
         {WEEKDAYS.map((weekday, index) => (
-          <div className={["border-b border-r border-ink/10 py-2", weekdayHeaderClass(index)].join(" ")} key={weekday}>
+          <div className={["border-b border-r border-ink/[0.06] py-2.5", weekdayHeaderClass(index)].join(" ")} key={weekday}>
             {weekday}
           </div>
         ))}
       </div>
-      <div className="grid grid-cols-7 border-l border-t border-ink/10">
+      <div className="grid grid-cols-7 overflow-hidden rounded-b-lg border border-t-0 border-ink/10">
         {cells.map((date, index) => {
           if (!date) {
-            return <div className="min-h-24 border-b border-r border-ink/10 bg-paper/45" key={`blank-${index}`} />;
+            return <div className="min-h-28 border-b border-r border-ink/[0.06] bg-paper/40" key={`blank-${index}`} />;
           }
 
           const rows = groupedRows.get(date) ?? [];
@@ -226,7 +226,7 @@ function MonthSection({
           return (
             <div
               className={[
-                "min-h-28 border-b border-r border-ink/10 p-3 text-left transition",
+                "min-h-28 border-b border-r border-ink/[0.06] p-3 text-left transition-all duration-150",
                 isPast ? "bg-sumi/[0.06] text-sumi/40" : dayTone.cellClass,
                 isSelected ? "ring-2 ring-inset ring-matcha" : ""
               ].join(" ")}
@@ -254,7 +254,7 @@ function MonthSection({
                 {canAdd ? (
                   <button
                     aria-label={`${formatDateJa(date)}に時間を追加`}
-                    className="grid size-8 shrink-0 place-items-center rounded-md border border-ink/15 bg-white/80 text-ink hover:bg-white"
+                    className="grid size-8 shrink-0 place-items-center rounded-lg border border-ink/15 bg-white/80 text-ink transition-all duration-150 hover:bg-matcha/10 hover:border-matcha/30 hover:text-matcha"
                     onClick={() => onAdd(date)}
                     type="button"
                   >
@@ -272,8 +272,8 @@ function MonthSection({
                   <span
                     className={
                       isPast
-                        ? "inline-flex rounded-md bg-sumi/10 px-2 py-1 text-xs font-medium text-sumi/45"
-                        : "inline-flex rounded-md bg-matcha/10 px-2 py-1 text-xs font-medium text-matcha"
+                        ? "inline-flex rounded-full bg-sumi/10 px-2 py-1 text-xs font-medium text-sumi/45"
+                        : "inline-flex rounded-full bg-matcha/10 px-2 py-1 text-xs font-medium text-matcha"
                     }
                   >
                     設定済み {rows.length} 件
@@ -319,7 +319,7 @@ function DayEditor({
   const canAdd = selectedDate > todayKey || (selectedDate === todayKey && currentTime < "23:00");
 
   return (
-    <aside className="rounded-lg border border-ink/10 bg-paper/65 p-4 xl:sticky xl:top-24 xl:self-start">
+    <aside className="rounded-xl border border-ink/10 bg-paper/60 p-4 shadow-soft xl:sticky xl:top-24 xl:self-start">
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-sm font-medium text-matcha">選択中の日付</p>
@@ -327,7 +327,7 @@ function DayEditor({
         </div>
         {canAdd ? (
           <button
-            className="inline-flex items-center gap-1 rounded-md border border-ink/15 bg-white px-3 py-2 text-sm font-medium text-ink"
+            className="inline-flex items-center gap-1 rounded-lg border border-ink/15 bg-white px-3 py-2 text-sm font-medium text-ink transition-all duration-150 hover:border-matcha/30 hover:bg-matcha/[0.06] hover:text-matcha"
             onClick={() => onAdd(selectedDate)}
             type="button"
           >
@@ -338,7 +338,7 @@ function DayEditor({
       </div>
 
       {issueMessages.length > 0 ? (
-        <div className="mt-4 space-y-1 rounded-md border border-sakura/30 bg-sakura/10 p-3 text-sm text-sakura">
+        <div className="mt-4 space-y-1 rounded-lg border border-sakura/25 bg-sakura/[0.06] p-3 text-sm text-sakura">
           {issueMessages.map((message) => (
             <p key={message}>{message}</p>
           ))}
@@ -390,12 +390,12 @@ function SlotEditor({ currentTime, defaultStartTime, invalid, onRemove, onUpdate
   }
 
   return (
-    <div className={invalid ? "rounded-md border border-sakura/35 bg-sakura/5 p-3" : "rounded-md border border-ink/10 bg-white p-3"}>
+    <div className={invalid ? "rounded-lg border border-sakura/30 bg-sakura/[0.04] p-3" : "rounded-lg border border-ink/10 bg-white p-3"}>
       <div className="grid grid-cols-[1fr_1fr_auto] items-end gap-2">
         <label className="grid gap-1 text-xs text-sumi">
           開始
           <input
-            className="min-w-0 rounded-md border border-ink/15 px-3 py-2 text-base"
+            className="min-w-0 rounded-lg border border-ink/15 px-3 py-2 text-base outline-none ring-matcha/30 transition-all duration-200 focus:border-matcha/50 focus:ring-4"
             min={minTime}
             onChange={(event) => onUpdate(row.key, "start_time", event.target.value)}
             step={1800}
@@ -406,7 +406,7 @@ function SlotEditor({ currentTime, defaultStartTime, invalid, onRemove, onUpdate
         <label className="grid gap-1 text-xs text-sumi">
           終了
           <input
-            className="min-w-0 rounded-md border border-ink/15 px-3 py-2 text-base"
+            className="min-w-0 rounded-lg border border-ink/15 px-3 py-2 text-base outline-none ring-matcha/30 transition-all duration-200 focus:border-matcha/50 focus:ring-4"
             min={minTime}
             onChange={(event) => onUpdate(row.key, "end_time", event.target.value)}
             step={1800}
@@ -416,7 +416,7 @@ function SlotEditor({ currentTime, defaultStartTime, invalid, onRemove, onUpdate
         </label>
         <button
           aria-label="削除"
-          className="grid size-10 place-items-center rounded-md border border-sakura/35 text-sakura hover:bg-sakura/10"
+          className="grid size-10 place-items-center rounded-lg border border-sakura/25 text-sakura/70 transition-all duration-150 hover:border-sakura/40 hover:bg-sakura/[0.06] hover:text-sakura"
           onClick={() => onRemove(row.key)}
           type="button"
         >

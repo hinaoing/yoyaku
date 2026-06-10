@@ -1,4 +1,4 @@
-import { Video } from "lucide-react";
+import { User, Video } from "lucide-react";
 import { BookingCalendar } from "@/app/teachers/[teacherId]/booking-calendar";
 import { EmptyState } from "@/components/empty-state";
 import { StatusBanner } from "@/components/status-banner";
@@ -71,22 +71,29 @@ export default async function TeacherPage({ params, searchParams }: TeacherPageP
 
   return (
     <div className="grid gap-7 lg:grid-cols-[minmax(320px,0.75fr)_minmax(0,1.35fr)]">
-      <section className="rounded-lg border border-ink/10 bg-white p-6 shadow-soft">
-        <p className="text-sm font-medium text-matcha">講師プロフィール</p>
-        <h1 className="mt-2 text-3xl font-semibold text-ink">{teacher.display_name}</h1>
-        <p className="mt-4 leading-7 text-sumi/80">{teacher.bio || "プロフィールはまだ登録されていません。"}</p>
+      <section className="rounded-xl border border-ink/10 bg-white p-6 shadow-soft">
+        <div className="flex items-start gap-4">
+          <div className="grid size-14 shrink-0 place-items-center rounded-full bg-matcha/10 text-matcha">
+            <User size={26} />
+          </div>
+          <div>
+            <p className="text-sm font-medium tracking-wide text-matcha">講師プロフィール</p>
+            <h1 className="mt-1 text-2xl font-semibold tracking-tight text-ink">{teacher.display_name}</h1>
+          </div>
+        </div>
+        <p className="mt-5 leading-7 text-sumi/75">{teacher.bio || "プロフィールはまだ登録されていません。"}</p>
         {teacher.meeting_url ? (
-          <p className="mt-5 inline-flex items-center gap-2 rounded-md bg-matcha/10 px-3 py-2 text-sm text-sumi">
-            <Video size={16} />
+          <div className="mt-5 inline-flex items-center gap-2 rounded-lg bg-matcha/[0.07] px-3 py-2 text-sm text-sumi/70">
+            <Video size={16} className="text-matcha" />
             予約後にレッスンURLが表示されます
-          </p>
+          </div>
         ) : null}
       </section>
 
       <section className="min-w-0 space-y-4">
         <div>
-          <p className="text-sm font-medium text-matcha">空き時間</p>
-          <h2 className="mt-2 text-2xl font-semibold text-ink">今月・来月の予約枠</h2>
+          <p className="text-sm font-medium tracking-wide text-matcha">空き時間</p>
+          <h2 className="mt-2 text-2xl font-semibold tracking-tight text-ink">今月・来月の予約枠</h2>
         </div>
         <StatusBanner message={booked ? "予約が完了しました。予約一覧でも確認できます。" : undefined} />
         <StatusBanner message={errorMessage} tone="error" />

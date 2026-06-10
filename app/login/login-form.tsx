@@ -142,7 +142,7 @@ export function LoginForm() {
         <label className="block">
           <span className="mb-2 block text-sm font-medium text-sumi">メールアドレス</span>
           <input
-            className="w-full rounded-md border border-ink/15 bg-white px-3 py-3 outline-none ring-matcha/30 focus:ring-4"
+            className="w-full rounded-md border border-ink/15 bg-white px-3 py-3 outline-none ring-matcha/30 transition-all duration-200 placeholder:text-sumi/40 focus:border-matcha/50 focus:ring-4"
             onChange={(event) => setEmail(event.target.value)}
             placeholder="name@example.com"
             required
@@ -160,7 +160,7 @@ export function LoginForm() {
         )}
 
         <button
-          className="inline-flex w-full items-center justify-center gap-2 rounded-md bg-ink px-4 py-3 font-medium text-white disabled:cursor-not-allowed disabled:opacity-60"
+          className="inline-flex w-full items-center justify-center gap-2 rounded-md bg-ink px-4 py-3 font-medium text-white transition-all duration-200 hover:bg-ink/90 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:bg-ink disabled:active:scale-100"
           disabled={isSubmitting || cooldownSeconds > 0 || !isConfigured || !isTurnstileConfigured}
           type="submit"
         >
@@ -175,7 +175,7 @@ export function LoginForm() {
                   ? "Turnstile 設定が必要です"
                   : "ログインリンクを送る"}
         </button>
-        {message ? <p className="rounded-md bg-white px-3 py-2 text-sm text-sumi shadow-soft">{message}</p> : null}
+        {message ? <p className="rounded-md border-l-[3px] border-matcha/40 bg-white px-4 py-3 text-sm leading-relaxed text-sumi shadow-soft">{message}</p> : null}
       </form>
     </>
   );

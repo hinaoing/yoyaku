@@ -22,14 +22,15 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
   }
 
   return (
-    <div className="mx-auto grid max-w-md gap-6 pt-10">
-      <div>
-        <p className="text-sm font-medium text-matcha">オンラインレッスン予約</p>
-        <h1 className="mt-2 text-3xl font-semibold text-ink">ログイン</h1>
-        <p className="mt-3 text-sumi/75">メールに届くリンクから、講師または生徒として予約を管理できます。</p>
+    <div className="relative mx-auto grid min-h-[80vh] max-w-md content-center gap-6">
+      <div className="pointer-events-none absolute -top-20 left-1/2 h-72 w-72 -translate-x-1/2 rounded-full bg-matcha/[0.06] blur-3xl" aria-hidden="true" />
+      <div className="relative">
+        <p className="text-sm font-medium tracking-wide text-matcha">オンラインレッスン予約</p>
+        <h1 className="mt-2 text-3xl font-semibold tracking-tight text-ink">ログイン</h1>
+        <p className="mt-3 leading-relaxed text-sumi/75">メールに届くリンクから、講師または生徒として予約を管理できます。</p>
       </div>
       <StatusBanner message={error ? `ログインできませんでした: ${error}` : undefined} tone="error" />
-      <section className="rounded-lg border border-ink/10 bg-paper p-5 shadow-soft">
+      <section className="relative rounded-xl border border-ink/10 bg-paper p-6 shadow-soft">
         <LoginForm />
       </section>
     </div>
