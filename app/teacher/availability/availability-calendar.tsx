@@ -289,10 +289,15 @@ function MonthSection({
             <div
               className={[
                 "min-h-[5.5rem] border-b border-r border-ink/[0.06] p-2 text-left transition-all duration-150 sm:min-h-28 sm:p-3",
-                isPast ? "bg-sumi/[0.06] text-sumi/40" : dayTone.cellClass,
+                isPast ? "bg-sumi/[0.06] text-sumi/40" : `${dayTone.cellClass} cursor-pointer`,
                 isSelected ? "ring-2 ring-inset ring-matcha" : ""
               ].join(" ")}
               key={date}
+              onClick={() => {
+                if (!isPast) {
+                  onSelect(date);
+                }
+              }}
             >
               <div className="flex items-start justify-between gap-1">
                 <button
@@ -317,7 +322,10 @@ function MonthSection({
                   <button
                     aria-label={`${formatDateJa(date)}に時間を追加`}
                     className="grid size-7 shrink-0 place-items-center rounded-md border border-ink/15 bg-white/80 text-ink transition-all duration-150 hover:border-matcha/30 hover:bg-matcha/10 hover:text-matcha sm:size-8 sm:rounded-lg"
-                    onClick={() => onAdd(date)}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      onAdd(date);
+                    }}
                     type="button"
                   >
                     <Plus size={14} />
@@ -453,29 +461,31 @@ function SlotEditor({ currentTime, defaultStartTime, invalid, onRemove, onUpdate
 
   return (
     <div className={invalid ? "rounded-lg border border-sakura/30 bg-sakura/[0.04] p-3" : "rounded-lg border border-ink/10 bg-white p-3"}>
-      <div className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-end gap-3">
-        <label className="grid gap-1 text-xs text-sumi">
-          開始
-          <TimeSelect
-            min={minTime}
-            onChange={(value) => onUpdate(row.key, "start_time", value)}
-            value={row.start_time}
-          />
-        </label>
+      <div className="grid gap-3">
+        <div className="grid grid-cols-[minmax(0,1fr)_auto] items-end gap-3">
+          <label className="grid gap-1 text-xs text-sumi">
+            開始
+            <TimeSelect
+              min={minTime}
+              onChange={(value) => onUpdate(row.key, "start_time", value)}
+              value={row.start_time}
+            />
+          </label>
+          <button
+            aria-label="削除"
+            className="grid size-9 place-items-center rounded-lg border border-sakura/25 text-sakura/70 transition-all duration-150 hover:border-sakura/40 hover:bg-sakura/[0.06] hover:text-sakura"
+            onClick={() => onRemove(row.key)}
+            type="button"
+          >
+            <Trash2 size={15} />
+          </button>
+        </div>
         <div className="grid gap-1 text-xs text-sumi">
           終了
           <div className="rounded-lg border border-ink/10 bg-paper/70 px-3 py-2 text-sm font-medium text-sumi/70">
             {row.end_time}
           </div>
         </div>
-        <button
-          aria-label="削除"
-          className="grid size-9 place-items-center rounded-lg border border-sakura/25 text-sakura/70 transition-all duration-150 hover:border-sakura/40 hover:bg-sakura/[0.06] hover:text-sakura"
-          onClick={() => onRemove(row.key)}
-          type="button"
-        >
-          <Trash2 size={15} />
-        </button>
       </div>
     </div>
   );
@@ -487,14 +497,14 @@ function TimeSelect({ min, onChange, value }: { min?: string; onChange: (value: 
   const hour = normalizeHour(rawHour);
   const minute = normalizeMinute(rawMinute);
   const selectClass =
-    "min-w-0 rounded-lg border border-ink/15 bg-white px-2 py-2 text-sm outline-none ring-matcha/30 transition-all duration-200 focus:border-matcha/50 focus:ring-4";
+    "w-[4.75rem] rounded-lg border border-ink/15 bg-white py-2 pl-3 pr-8 text-sm outline-none ring-matcha/30 transition-all duration-200 focus:border-matcha/50 focus:ring-4";
 
   function changeTime(part: "hour" | "minute", nextValue: string) {
     onChange(part === "hour" ? `${nextValue}:${minute}` : `${hour}:${nextValue}`);
   }
 
   return (
-    <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-1">
+    <div className="grid grid-cols-[4.75rem_auto_4.75rem] items-center gap-1">
       <select className={selectClass} onChange={(event) => changeTime("hour", event.target.value)} value={hour}>
         {TIME_HOURS.map((option) => (
           <option disabled={min ? option < minHour : false} key={option} value={option}>
