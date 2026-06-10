@@ -13,6 +13,9 @@ revoke update on public.bookings from authenticated;
 grant select on public.bookings to authenticated;
 grant update (status, canceled_at) on public.bookings to authenticated;
 
+alter table public.bookings
+  add column if not exists reminder_sent_at timestamptz;
+
 create unique index if not exists bookings_one_confirmed_student_slot
   on public.bookings (student_id, starts_at)
   where status = 'confirmed';
@@ -144,6 +147,19 @@ security definer
 set search_path = public
 as $$
 begin
+  if coalesce(current_setting('request.jwt.claim.role', true), '') = 'service_role'
+    and new.teacher_id is not distinct from old.teacher_id
+    and new.student_id is not distinct from old.student_id
+    and new.starts_at is not distinct from old.starts_at
+    and new.ends_at is not distinct from old.ends_at
+    and new.status is not distinct from old.status
+    and new.canceled_at is not distinct from old.canceled_at
+    and new.created_at is not distinct from old.created_at
+    and new.reminder_sent_at is distinct from old.reminder_sent_at
+  then
+    return new;
+  end if;
+
   if new.teacher_id is distinct from old.teacher_id
     or new.student_id is distinct from old.student_id
     or new.starts_at is distinct from old.starts_at

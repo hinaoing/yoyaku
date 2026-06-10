@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { CANCEL_CUTOFF_HOURS, LESSON_DURATION_MINUTES } from "@/lib/constants";
+import { sendBookingCanceledEmails, sendBookingConfirmedEmails } from "@/lib/email/booking-notifications";
 import {
   canCancelBooking,
   addMinutesIso,
@@ -34,17 +35,23 @@ export async function createBooking(teacherId: string, startsAt: string) {
     redirect(`/teachers/${teacherId}?error=slot-unavailable`);
   }
 
-  const { error } = await adminSupabase.from("bookings").insert({
-    teacher_id: teacherId,
-    student_id: user.id,
-    starts_at: startsAt,
-    ends_at: endsAt,
-    status: "confirmed"
-  });
+  const { data: createdBooking, error } = await adminSupabase
+    .from("bookings")
+    .insert({
+      teacher_id: teacherId,
+      student_id: user.id,
+      starts_at: startsAt,
+      ends_at: endsAt,
+      status: "confirmed"
+    })
+    .select("id")
+    .single();
 
   if (error) {
     redirect(`/teachers/${teacherId}?error=slot-unavailable`);
   }
+
+  await sendBookingConfirmedEmails(adminSupabase, createdBooking.id);
 
   revalidatePath(`/teachers/${teacherId}`);
   revalidatePath("/student/bookings");
@@ -53,6 +60,7 @@ export async function createBooking(teacherId: string, startsAt: string) {
 
 export async function cancelBooking(bookingId: string) {
   const { supabase, user } = await requireUser();
+  const adminSupabase = createAdminClient();
   const { data: booking, error } = await supabase
     .from("bookings")
     .select("id, starts_at, teacher_id, student_id")
@@ -79,6 +87,8 @@ export async function cancelBooking(bookingId: string) {
   if (cancelError) {
     redirect("/student/bookings?error=cancel");
   }
+
+  await sendBookingCanceledEmails(adminSupabase, bookingId);
 
   revalidatePath("/student/bookings");
   revalidatePath("/teacher/bookings");

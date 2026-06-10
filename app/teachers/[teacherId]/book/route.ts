@@ -1,6 +1,7 @@
 import { revalidatePath } from "next/cache";
 import { NextResponse } from "next/server";
 import { LESSON_DURATION_MINUTES } from "@/lib/constants";
+import { sendBookingConfirmedEmails } from "@/lib/email/booking-notifications";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { addMinutesIso, formatTokyoDateKey, generateSlotsFromDateAvailability, getCurrentAndNextMonthRange } from "@/lib/time";
@@ -73,17 +74,23 @@ export async function POST(request: Request, { params }: BookingRouteContext) {
   }
 
   const endsAt = addMinutesIso(startsAt, LESSON_DURATION_MINUTES);
-  const { error } = await adminSupabase.from("bookings").insert({
-    teacher_id: teacherId,
-    student_id: user.id,
-    starts_at: startsAt,
-    ends_at: endsAt,
-    status: "confirmed"
-  });
+  const { data: createdBooking, error } = await adminSupabase
+    .from("bookings")
+    .insert({
+      teacher_id: teacherId,
+      student_id: user.id,
+      starts_at: startsAt,
+      ends_at: endsAt,
+      status: "confirmed"
+    })
+    .select("id")
+    .single();
 
   if (error) {
     return redirectTo(request, `/teachers/${teacherId}?error=slot-unavailable`);
   }
+
+  await sendBookingConfirmedEmails(adminSupabase, createdBooking.id);
 
   revalidatePath(`/teachers/${teacherId}`);
   revalidatePath("/student/bookings");
