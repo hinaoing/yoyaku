@@ -22,6 +22,17 @@ export async function createBooking(teacherId: string, startsAt: string) {
   const { user } = await requireRole("student");
   const adminSupabase = createAdminClient();
   const endsAt = addMinutesIso(startsAt, LESSON_DURATION_MINUTES);
+  const { data: studentConflict } = await adminSupabase
+    .from("bookings")
+    .select("id")
+    .eq("student_id", user.id)
+    .eq("starts_at", startsAt)
+    .eq("status", "confirmed")
+    .maybeSingle();
+
+  if (studentConflict) {
+    redirect(`/teachers/${teacherId}?error=slot-unavailable`);
+  }
 
   const { error } = await adminSupabase.from("bookings").insert({
     teacher_id: teacherId,

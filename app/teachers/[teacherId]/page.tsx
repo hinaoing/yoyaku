@@ -44,7 +44,7 @@ export default async function TeacherPage({ params, searchParams }: TeacherPageP
   const now = new Date();
   const adminSupabase = createAdminClient();
   const { currentMonthStart, nextMonthStart, nextMonthEnd } = getCurrentAndNextMonthRange(now);
-  const [{ data: availability }, { data: bookings }] = await Promise.all([
+  const [{ data: availability }, { data: teacherBookings }, { data: studentBookings }] = await Promise.all([
     supabase
       .from("date_availability")
       .select("*")
@@ -58,10 +58,16 @@ export default async function TeacherPage({ params, searchParams }: TeacherPageP
       .select("starts_at, status")
       .eq("teacher_id", teacherId)
       .eq("status", "confirmed")
+      .gte("starts_at", now.toISOString()),
+    adminSupabase
+      .from("bookings")
+      .select("starts_at, status")
+      .eq("student_id", user.id)
+      .eq("status", "confirmed")
       .gte("starts_at", now.toISOString())
   ]);
   const dates = listDatesBetween(currentMonthStart, nextMonthEnd);
-  const slots = generateSlotsFromDateAvailability(availability ?? [], bookings ?? [], now);
+  const slots = generateSlotsFromDateAvailability(availability ?? [], [...(teacherBookings ?? []), ...(studentBookings ?? [])], now);
   const errorMessage =
     error === "student-required"
       ? "予約するには学生アカウントでログインしてください。"

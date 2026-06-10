@@ -13,6 +13,10 @@ revoke update on public.bookings from authenticated;
 grant select on public.bookings to authenticated;
 grant update (status, canceled_at) on public.bookings to authenticated;
 
+create unique index if not exists bookings_one_confirmed_student_slot
+  on public.bookings (student_id, starts_at)
+  where status = 'confirmed';
+
 create or replace function public.prevent_authenticated_role_change()
 returns trigger
 language plpgsql
@@ -71,6 +75,16 @@ begin
   ) then
     raise exception 'booking teacher does not exist'
       using errcode = '23514';
+  end if;
+
+  if exists (
+    select 1 from public.bookings
+    where bookings.student_id = new.student_id
+      and bookings.starts_at = new.starts_at
+      and bookings.status = 'confirmed'
+  ) then
+    raise exception 'student already has a booking at this time'
+      using errcode = '23505';
   end if;
 
   if new.starts_at <= now() then

@@ -135,6 +135,29 @@ describe("generateSlotsFromDateAvailability", () => {
     ]);
   });
 
+  it("excludes slots that conflict with the student's existing bookings", () => {
+    const now = new Date("2026-05-04T00:00:00+09:00");
+    const availability: DateAvailability[] = [
+      {
+        teacher_id: "teacher-2",
+        availability_date: "2026-05-04",
+        start_time: "18:00",
+        end_time: "19:00"
+      }
+    ];
+    const studentBookings = [
+      {
+        starts_at: "2026-05-04T09:30:00.000Z",
+        status: "confirmed"
+      }
+    ] as Pick<Booking, "starts_at" | "status">[];
+    const slots = generateSlotsFromDateAvailability(availability, studentBookings, now);
+
+    expect(slots.map((slot) => [slot.startsAt, slot.endsAt])).toEqual([
+      ["2026-05-04T09:00:00.000Z", "2026-05-04T09:25:00.000Z"]
+    ]);
+  });
+
   it("does not generate slots from non-30-minute start interval boundaries", () => {
     const now = new Date("2026-05-04T00:00:00+09:00");
     const availability: DateAvailability[] = [

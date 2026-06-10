@@ -46,7 +46,7 @@ export async function POST(request: Request, { params }: BookingRouteContext) {
     return redirectTo(request, `/teachers/${teacherId}?error=slot-unavailable`);
   }
 
-  const [{ data: availability }, { data: bookings }] = await Promise.all([
+  const [{ data: availability }, { data: teacherBookings }, { data: studentConflict }] = await Promise.all([
     supabase
       .from("date_availability")
       .select("*")
@@ -57,11 +57,18 @@ export async function POST(request: Request, { params }: BookingRouteContext) {
       .select("starts_at, status")
       .eq("teacher_id", teacherId)
       .eq("status", "confirmed")
-      .gte("starts_at", now.toISOString())
+      .gte("starts_at", now.toISOString()),
+    adminSupabase
+      .from("bookings")
+      .select("id")
+      .eq("student_id", user.id)
+      .eq("starts_at", startsAt)
+      .eq("status", "confirmed")
+      .maybeSingle()
   ]);
-  const availableStarts = new Set(generateSlotsFromDateAvailability(availability ?? [], bookings ?? [], now).map((slot) => slot.startsAt));
+  const availableStarts = new Set(generateSlotsFromDateAvailability(availability ?? [], teacherBookings ?? [], now).map((slot) => slot.startsAt));
 
-  if (!availableStarts.has(startsAt)) {
+  if (studentConflict || !availableStarts.has(startsAt)) {
     return redirectTo(request, `/teachers/${teacherId}?error=slot-unavailable`);
   }
 

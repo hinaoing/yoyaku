@@ -46,6 +46,10 @@ create unique index bookings_one_confirmed_slot
   on public.bookings (teacher_id, starts_at)
   where status = 'confirmed';
 
+create unique index bookings_one_confirmed_student_slot
+  on public.bookings (student_id, starts_at)
+  where status = 'confirmed';
+
 alter table public.profiles enable row level security;
 alter table public.teachers enable row level security;
 alter table public.date_availability enable row level security;
@@ -139,6 +143,16 @@ begin
   ) then
     raise exception 'booking teacher does not exist'
       using errcode = '23514';
+  end if;
+
+  if exists (
+    select 1 from public.bookings
+    where bookings.student_id = new.student_id
+      and bookings.starts_at = new.starts_at
+      and bookings.status = 'confirmed'
+  ) then
+    raise exception 'student already has a booking at this time'
+      using errcode = '23505';
   end if;
 
   if new.starts_at <= now() then
