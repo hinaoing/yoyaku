@@ -48,6 +48,7 @@ export function AvailabilityCalendar({
     }))
   );
   const [selectedDate, setSelectedDate] = useState(() => dates.find((date) => date >= todayKey) ?? dates[0] ?? "");
+  const [activeTab, setActiveTab] = useState<"current" | "next">("current");
 
   const groupedRows = useMemo(() => {
     const grouped = new Map<string, Row[]>();
@@ -105,6 +106,19 @@ export function AvailabilityCalendar({
   const nextMonthDates = dates.filter((date) => date >= nextMonthStart);
   const selectedRows = groupedRows.get(selectedDate) ?? [];
 
+  const currentMonthLabel = currentMonthDates[0]
+    ? new Intl.DateTimeFormat("ja-JP", { year: "numeric", month: "long" }).format(new Date(`${currentMonthDates[0]}T00:00:00+09:00`))
+    : "今月";
+  const nextMonthLabel = nextMonthDates[0]
+    ? new Intl.DateTimeFormat("ja-JP", { year: "numeric", month: "long" }).format(new Date(`${nextMonthDates[0]}T00:00:00+09:00`))
+    : "来月";
+
+  const activeDates = activeTab === "current" ? currentMonthDates : nextMonthDates;
+
+  // Count configured slots per month for tab badges
+  const currentMonthSlotCount = currentMonthDates.reduce((sum, d) => sum + (groupedRows.get(d)?.length ?? 0), 0);
+  const nextMonthSlotCount = nextMonthDates.reduce((sum, d) => sum + (groupedRows.get(d)?.length ?? 0), 0);
+
   return (
     <form action="/teacher/availability/save" className="space-y-5 rounded-xl border border-ink/10 bg-white p-5 shadow-soft" method="post">
       <input name="rangeStart" type="hidden" value={rangeStart} />
@@ -116,29 +130,56 @@ export function AvailabilityCalendar({
           <input name="slotEnd" type="hidden" value={row.end_time} />
         </div>
       ))}
-      <div className="grid min-w-0 gap-5 xl:grid-cols-[minmax(0,1fr)_360px]">
-        <div className="min-w-0 space-y-6">
-          <MonthSection
-            currentTime={currentTime}
-            dates={currentMonthDates}
-            groupedRows={groupedRows}
-            onAdd={addRow}
-            onSelect={setSelectedDate}
-            selectedDate={selectedDate}
-            title="今月"
-            todayKey={todayKey}
-          />
-          <MonthSection
-            currentTime={currentTime}
-            dates={nextMonthDates}
-            groupedRows={groupedRows}
-            onAdd={addRow}
-            onSelect={setSelectedDate}
-            selectedDate={selectedDate}
-            title="来月"
-            todayKey={todayKey}
-          />
-        </div>
+
+      {/* Month tabs */}
+      <div className="flex gap-1 rounded-lg border border-ink/10 bg-paper/60 p-1">
+        <button
+          className={[
+            "flex flex-1 items-center justify-center gap-2 rounded-md px-4 py-2.5 text-sm font-medium transition-all duration-200",
+            activeTab === "current"
+              ? "bg-white text-ink shadow-sm"
+              : "text-sumi/60 hover:text-sumi"
+          ].join(" ")}
+          onClick={() => setActiveTab("current")}
+          type="button"
+        >
+          {currentMonthLabel}
+          {currentMonthSlotCount > 0 && (
+            <span className="rounded-full bg-matcha/10 px-2 py-0.5 text-xs font-medium text-matcha">
+              {currentMonthSlotCount}
+            </span>
+          )}
+        </button>
+        <button
+          className={[
+            "flex flex-1 items-center justify-center gap-2 rounded-md px-4 py-2.5 text-sm font-medium transition-all duration-200",
+            activeTab === "next"
+              ? "bg-white text-ink shadow-sm"
+              : "text-sumi/60 hover:text-sumi"
+          ].join(" ")}
+          onClick={() => setActiveTab("next")}
+          type="button"
+        >
+          {nextMonthLabel}
+          {nextMonthSlotCount > 0 && (
+            <span className="rounded-full bg-matcha/10 px-2 py-0.5 text-xs font-medium text-matcha">
+              {nextMonthSlotCount}
+            </span>
+          )}
+        </button>
+      </div>
+
+      {/* Calendar + Day editor sidebar */}
+      <div className="grid min-w-0 gap-5 lg:grid-cols-[minmax(0,1fr)_280px]">
+        <MonthSection
+          currentTime={currentTime}
+          dates={activeDates}
+          groupedRows={groupedRows}
+          onAdd={addRow}
+          onSelect={setSelectedDate}
+          selectedDate={selectedDate}
+          todayKey={todayKey}
+        />
         <DayEditor
           currentTime={currentTime}
           defaultStartTime={defaultStartTime}
@@ -178,7 +219,6 @@ type MonthSectionProps = {
   onAdd: (date: string) => void;
   onSelect: (date: string) => void;
   selectedDate: string;
-  title: string;
   todayKey: string;
 };
 
@@ -189,20 +229,12 @@ function MonthSection({
   onAdd,
   onSelect,
   selectedDate,
-  title,
   todayKey
 }: MonthSectionProps) {
   const cells = buildMonthCalendarDates(dates);
-  const monthLabel = dates[0]
-    ? new Intl.DateTimeFormat("ja-JP", { year: "numeric", month: "long" }).format(new Date(`${dates[0]}T00:00:00+09:00`))
-    : title;
 
   return (
-    <section className="space-y-3">
-      <div>
-        <p className="text-sm font-medium text-matcha">{title}</p>
-        <h2 className="text-2xl font-semibold text-ink">{monthLabel}</h2>
-      </div>
+    <section className="min-w-0 space-y-0">
       <div className="grid grid-cols-7 overflow-hidden rounded-t-lg border border-ink/10 text-center text-sm font-medium text-sumi/60">
         {WEEKDAYS.map((weekday, index) => (
           <div className={["border-b border-r border-ink/[0.06] py-2.5", weekdayHeaderClass(index)].join(" ")} key={weekday}>
@@ -213,7 +245,7 @@ function MonthSection({
       <div className="grid grid-cols-7 overflow-hidden rounded-b-lg border border-t-0 border-ink/10">
         {cells.map((date, index) => {
           if (!date) {
-            return <div className="min-h-28 border-b border-r border-ink/[0.06] bg-paper/40" key={`blank-${index}`} />;
+            return <div className="min-h-[5.5rem] border-b border-r border-ink/[0.06] bg-paper/40 sm:min-h-28" key={`blank-${index}`} />;
           }
 
           const rows = groupedRows.get(date) ?? [];
@@ -226,13 +258,13 @@ function MonthSection({
           return (
             <div
               className={[
-                "min-h-28 border-b border-r border-ink/[0.06] p-3 text-left transition-all duration-150",
+                "min-h-[5.5rem] border-b border-r border-ink/[0.06] p-2 text-left transition-all duration-150 sm:min-h-28 sm:p-3",
                 isPast ? "bg-sumi/[0.06] text-sumi/40" : dayTone.cellClass,
                 isSelected ? "ring-2 ring-inset ring-matcha" : ""
               ].join(" ")}
               key={date}
             >
-              <div className="flex items-start justify-between gap-3">
+              <div className="flex items-start justify-between gap-1">
                 <button
                   className="min-w-0 flex-1 text-left"
                   disabled={isPast}
@@ -242,10 +274,10 @@ function MonthSection({
                   <span
                     className={
                       isPast
-                        ? "text-lg font-medium text-sumi/40"
+                        ? "text-base font-medium text-sumi/40 sm:text-lg"
                         : isToday
-                          ? "text-lg font-semibold text-matcha"
-                          : `text-lg font-medium ${dayTone.dateClass}`
+                          ? "text-base font-semibold text-matcha sm:text-lg"
+                          : `text-base font-medium sm:text-lg ${dayTone.dateClass}`
                     }
                   >
                     {date.slice(-2)}
@@ -254,16 +286,16 @@ function MonthSection({
                 {canAdd ? (
                   <button
                     aria-label={`${formatDateJa(date)}に時間を追加`}
-                    className="grid size-8 shrink-0 place-items-center rounded-lg border border-ink/15 bg-white/80 text-ink transition-all duration-150 hover:bg-matcha/10 hover:border-matcha/30 hover:text-matcha"
+                    className="grid size-7 shrink-0 place-items-center rounded-md border border-ink/15 bg-white/80 text-ink transition-all duration-150 hover:border-matcha/30 hover:bg-matcha/10 hover:text-matcha sm:size-8 sm:rounded-lg"
                     onClick={() => onAdd(date)}
                     type="button"
                   >
-                    <Plus size={16} />
+                    <Plus size={14} />
                   </button>
                 ) : null}
               </div>
               <button
-                className="mt-4 w-full text-left text-sm text-sumi/65 disabled:text-sumi/40"
+                className="mt-2 w-full text-left text-sumi/65 disabled:text-sumi/40 sm:mt-4"
                 disabled={isPast}
                 onClick={() => onSelect(date)}
                 type="button"
@@ -272,14 +304,14 @@ function MonthSection({
                   <span
                     className={
                       isPast
-                        ? "inline-flex rounded-full bg-sumi/10 px-2 py-1 text-xs font-medium text-sumi/45"
-                        : "inline-flex rounded-full bg-matcha/10 px-2 py-1 text-xs font-medium text-matcha"
+                        ? "inline-flex rounded-full bg-sumi/10 px-1.5 py-0.5 text-[10px] font-medium text-sumi/45 sm:px-2 sm:py-1 sm:text-xs"
+                        : "inline-flex rounded-full bg-matcha/10 px-1.5 py-0.5 text-[10px] font-medium text-matcha sm:px-2 sm:py-1 sm:text-xs"
                     }
                   >
-                    設定済み {rows.length} 件
+                    {rows.length}件
                   </span>
                 ) : (
-                  "未設定"
+                  <span className="text-[10px] sm:text-xs">—</span>
                 )}
               </button>
             </div>
@@ -319,7 +351,7 @@ function DayEditor({
   const canAdd = selectedDate > todayKey || (selectedDate === todayKey && currentTime < "23:00");
 
   return (
-    <aside className="rounded-xl border border-ink/10 bg-paper/60 p-4 shadow-soft xl:sticky xl:top-24 xl:self-start">
+    <aside className="rounded-xl border border-ink/10 bg-paper/60 p-4 shadow-soft lg:sticky lg:top-24 lg:self-start">
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-sm font-medium text-matcha">選択中の日付</p>
@@ -395,7 +427,7 @@ function SlotEditor({ currentTime, defaultStartTime, invalid, onRemove, onUpdate
         <label className="grid gap-1 text-xs text-sumi">
           開始
           <input
-            className="min-w-0 rounded-lg border border-ink/15 px-3 py-2 text-base outline-none ring-matcha/30 transition-all duration-200 focus:border-matcha/50 focus:ring-4"
+            className="min-w-0 rounded-lg border border-ink/15 px-2 py-2 text-sm outline-none ring-matcha/30 transition-all duration-200 focus:border-matcha/50 focus:ring-4"
             min={minTime}
             onChange={(event) => onUpdate(row.key, "start_time", event.target.value)}
             step={1800}
@@ -406,7 +438,7 @@ function SlotEditor({ currentTime, defaultStartTime, invalid, onRemove, onUpdate
         <label className="grid gap-1 text-xs text-sumi">
           終了
           <input
-            className="min-w-0 rounded-lg border border-ink/15 px-3 py-2 text-base outline-none ring-matcha/30 transition-all duration-200 focus:border-matcha/50 focus:ring-4"
+            className="min-w-0 rounded-lg border border-ink/15 px-2 py-2 text-sm outline-none ring-matcha/30 transition-all duration-200 focus:border-matcha/50 focus:ring-4"
             min={minTime}
             onChange={(event) => onUpdate(row.key, "end_time", event.target.value)}
             step={1800}
@@ -416,11 +448,11 @@ function SlotEditor({ currentTime, defaultStartTime, invalid, onRemove, onUpdate
         </label>
         <button
           aria-label="削除"
-          className="grid size-10 place-items-center rounded-lg border border-sakura/25 text-sakura/70 transition-all duration-150 hover:border-sakura/40 hover:bg-sakura/[0.06] hover:text-sakura"
+          className="grid size-9 place-items-center rounded-lg border border-sakura/25 text-sakura/70 transition-all duration-150 hover:border-sakura/40 hover:bg-sakura/[0.06] hover:text-sakura"
           onClick={() => onRemove(row.key)}
           type="button"
         >
-          <Trash2 size={17} />
+          <Trash2 size={15} />
         </button>
       </div>
     </div>
