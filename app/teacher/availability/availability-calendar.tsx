@@ -4,7 +4,7 @@ import { Loader2, Plus, Save, Trash2 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { availabilityIssueMessages, validateAvailabilitySlots } from "@/lib/availability-validation";
-import { BOOKING_START_INTERVAL_MINUTES, LESSON_DURATION_MINUTES } from "@/lib/constants";
+import { APP_TIME_ZONE, BOOKING_START_INTERVAL_MINUTES, LESSON_DURATION_MINUTES } from "@/lib/constants";
 import { isJapanHoliday } from "@/lib/japan-holidays";
 import { buildMonthCalendarDates, formatDateJa, getWeekdayFromDateKey, parseTimeToMinutes, toTimeValue } from "@/lib/time";
 import type { DateAvailability } from "@/lib/types";
@@ -127,10 +127,10 @@ export function AvailabilityCalendar({
   const selectedRows = groupedRows.get(selectedDate) ?? [];
 
   const currentMonthLabel = currentMonthDates[0]
-    ? new Intl.DateTimeFormat("ja-JP", { year: "numeric", month: "long" }).format(new Date(`${currentMonthDates[0]}T00:00:00+09:00`))
+    ? new Intl.DateTimeFormat("ja-JP", { year: "numeric", month: "long", timeZone: APP_TIME_ZONE }).format(new Date(`${currentMonthDates[0]}T00:00:00+09:00`))
     : "今月";
   const nextMonthLabel = nextMonthDates[0]
-    ? new Intl.DateTimeFormat("ja-JP", { year: "numeric", month: "long" }).format(new Date(`${nextMonthDates[0]}T00:00:00+09:00`))
+    ? new Intl.DateTimeFormat("ja-JP", { year: "numeric", month: "long", timeZone: APP_TIME_ZONE }).format(new Date(`${nextMonthDates[0]}T00:00:00+09:00`))
     : "来月";
 
   const activeDates = activeTab === "current" ? currentMonthDates : nextMonthDates;

@@ -3,6 +3,7 @@
 import { CalendarPlus, ChevronRight, Loader2 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useFormStatus } from "react-dom";
+import { APP_TIME_ZONE } from "@/lib/constants";
 import { isJapanHoliday } from "@/lib/japan-holidays";
 import { buildMonthCalendarDates, formatDateJa, formatTimeJa, getWeekdayFromDateKey } from "@/lib/time";
 import type { Slot, UserRole } from "@/lib/types";
@@ -39,10 +40,10 @@ export function BookingCalendar({ dates, nextMonthStart, slots, teacherId, today
   const selectedSlots = groupedSlots.get(selectedDate) ?? [];
 
   const currentMonthLabel = currentMonthDates[0]
-    ? new Intl.DateTimeFormat("ja-JP", { year: "numeric", month: "long" }).format(new Date(`${currentMonthDates[0]}T00:00:00+09:00`))
+    ? new Intl.DateTimeFormat("ja-JP", { year: "numeric", month: "long", timeZone: APP_TIME_ZONE }).format(new Date(`${currentMonthDates[0]}T00:00:00+09:00`))
     : "今月";
   const nextMonthLabel = nextMonthDates[0]
-    ? new Intl.DateTimeFormat("ja-JP", { year: "numeric", month: "long" }).format(new Date(`${nextMonthDates[0]}T00:00:00+09:00`))
+    ? new Intl.DateTimeFormat("ja-JP", { year: "numeric", month: "long", timeZone: APP_TIME_ZONE }).format(new Date(`${nextMonthDates[0]}T00:00:00+09:00`))
     : "来月";
 
   const activeDates = activeTab === "current" ? currentMonthDates : nextMonthDates;
