@@ -6,6 +6,7 @@ import "./globals.css";
 import { createClient } from "@/lib/supabase/server";
 import { hasSupabaseConfig } from "@/lib/supabase/config";
 import type { UserRole } from "@/lib/types";
+import { isAdminEmail } from "@/lib/admin";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 
@@ -42,6 +43,7 @@ export default async function RootLayout({
   }
 
   const isTeacher = role === "teacher";
+  const isAdmin = isAdminEmail(user?.email);
 
   return (
     <html lang="ja" className={inter.variable}>
@@ -63,9 +65,19 @@ export default async function RootLayout({
                   予約
                 </Link>
               )}
+              {user && !isTeacher && (
+                <Link className="rounded-md px-3 py-2 transition-colors duration-150 hover:bg-ink/5 hover:text-ink" href="/teacher-application">
+                  講師になる
+                </Link>
+              )}
               {isTeacher && (
                 <Link className="rounded-md px-3 py-2 transition-colors duration-150 hover:bg-ink/5 hover:text-ink" href="/teacher/bookings">
                   講師
+                </Link>
+              )}
+              {isAdmin && (
+                <Link className="rounded-md px-3 py-2 transition-colors duration-150 hover:bg-ink/5 hover:text-ink" href="/admin/teacher-applications">
+                  管理
                 </Link>
               )}
               {user ? (

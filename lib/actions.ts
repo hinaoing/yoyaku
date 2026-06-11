@@ -5,6 +5,11 @@ import { redirect } from "next/navigation";
 import { CANCEL_CUTOFF_HOURS, LESSON_DURATION_MINUTES } from "@/lib/constants";
 import { sendBookingCanceledEmails, sendBookingConfirmedEmails } from "@/lib/email/booking-notifications";
 import {
+  sendTeacherApplicationApprovedEmail,
+  sendTeacherApplicationRejectedEmail,
+  sendTeacherApplicationSubmittedEmails
+} from "@/lib/email/teacher-application-notifications";
+import {
   canCancelBooking,
   addMinutesIso,
   formatTokyoDateKey,
@@ -14,6 +19,8 @@ import { validateAvailabilitySlots } from "@/lib/availability-validation";
 import type { AvailabilityInput } from "@/lib/types";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireRole, requireUser } from "@/lib/supabase/auth";
+import { isAdminEmail } from "@/lib/admin";
+import { validateTeacherApplicationForm } from "@/lib/teacher-application-validation";
 
 function ensureTime(value: FormDataEntryValue | null) {
   return typeof value === "string" ? value : "";
@@ -199,4 +206,177 @@ export async function updateTeacherSettings(formData: FormData) {
   revalidatePath("/teachers");
   revalidatePath(`/teachers/${user.id}`);
   redirect("/teacher/settings?saved=1");
+}
+
+export async function submitTeacherApplication(formData: FormData) {
+  const { supabase, user } = await requireUser();
+  const validation = validateTeacherApplicationForm(formData);
+
+  if (!validation.ok) {
+    redirect(`/teacher-application?error=${encodeURIComponent(validation.message)}`);
+  }
+
+  const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).maybeSingle();
+
+  if (profile?.role === "teacher") {
+    redirect("/teacher/settings");
+  }
+
+  const { data: existingApplication } = await supabase
+    .from("teacher_applications")
+    .select("id, status")
+    .eq("user_id", user.id)
+    .maybeSingle();
+
+  if (existingApplication?.status === "pending") {
+    redirect("/teacher-application?submitted=1");
+  }
+
+  if (existingApplication?.status === "approved") {
+    redirect("/teacher/settings");
+  }
+
+  const payload = {
+    display_name: validation.value.displayName,
+    bio: validation.value.bio || null,
+    meeting_url: validation.value.meetingUrl || null,
+    contact_email: validation.value.contactEmail,
+    message: validation.value.message || null,
+    status: "pending",
+    reviewed_by: null,
+    reviewed_at: null,
+    rejection_reason: null,
+    updated_at: new Date().toISOString()
+  };
+
+  const applicationResult = existingApplication
+    ? await supabase
+        .from("teacher_applications")
+        .update(payload)
+        .eq("id", existingApplication.id)
+        .select("id, contact_email, display_name")
+        .single()
+    : await supabase
+        .from("teacher_applications")
+        .insert({
+          ...payload,
+          user_id: user.id
+        })
+        .select("id, contact_email, display_name")
+        .single();
+
+  const { data: application, error } = applicationResult;
+
+  if (error || !application) {
+    redirect("/teacher-application?error=save");
+  }
+
+  await sendTeacherApplicationSubmittedEmails({
+    applicationId: application.id,
+    applicantEmail: user.email ?? validation.value.contactEmail,
+    contactEmail: application.contact_email,
+    displayName: application.display_name
+  });
+
+  revalidatePath("/teacher-application");
+  revalidatePath("/admin/teacher-applications");
+  redirect("/teacher-application?submitted=1");
+}
+
+export async function approveTeacherApplication(applicationId: string) {
+  const { user } = await requireUser();
+
+  if (!isAdminEmail(user.email)) {
+    redirect("/teachers");
+  }
+
+  const adminSupabase = createAdminClient();
+  const { data: application } = await adminSupabase
+    .from("teacher_applications")
+    .select("id, user_id, display_name, contact_email, profiles(email)")
+    .eq("id", applicationId)
+    .maybeSingle();
+
+  if (!application) {
+    redirect("/admin/teacher-applications?error=not-found");
+  }
+
+  const { error } = await adminSupabase.rpc("approve_teacher_application", {
+    application_id: applicationId,
+    reviewer_id: user.id
+  });
+
+  if (error) {
+    redirect("/admin/teacher-applications?error=approve");
+  }
+
+  const profile = Array.isArray(application.profiles) ? application.profiles[0] : application.profiles;
+
+  await sendTeacherApplicationApprovedEmail({
+    applicationId: application.id,
+    applicantEmail: profile?.email ?? application.contact_email,
+    contactEmail: application.contact_email,
+    displayName: application.display_name
+  });
+
+  revalidatePath("/admin/teacher-applications");
+  revalidatePath("/teachers");
+  revalidatePath(`/teachers/${application.user_id}`);
+  redirect("/admin/teacher-applications?approved=1");
+}
+
+export async function rejectTeacherApplication(formData: FormData) {
+  const { user } = await requireUser();
+
+  if (!isAdminEmail(user.email)) {
+    redirect("/teachers");
+  }
+
+  const applicationId = ensureTime(formData.get("applicationId"));
+  const rejectionReason = ensureTime(formData.get("rejectionReason")).trim();
+
+  if (!applicationId) {
+    redirect("/admin/teacher-applications?error=not-found");
+  }
+
+  const adminSupabase = createAdminClient();
+  const { data: application } = await adminSupabase
+    .from("teacher_applications")
+    .select("id, display_name, contact_email, profiles(email)")
+    .eq("id", applicationId)
+    .maybeSingle();
+
+  if (!application) {
+    redirect("/admin/teacher-applications?error=not-found");
+  }
+
+  const { error } = await adminSupabase
+    .from("teacher_applications")
+    .update({
+      status: "rejected",
+      reviewed_by: user.id,
+      reviewed_at: new Date().toISOString(),
+      rejection_reason: rejectionReason || null,
+      updated_at: new Date().toISOString()
+    })
+    .eq("id", applicationId)
+    .eq("status", "pending");
+
+  if (error) {
+    redirect("/admin/teacher-applications?error=reject");
+  }
+
+  const profile = Array.isArray(application.profiles) ? application.profiles[0] : application.profiles;
+
+  await sendTeacherApplicationRejectedEmail({
+    applicationId: application.id,
+    applicantEmail: profile?.email ?? application.contact_email,
+    contactEmail: application.contact_email,
+    displayName: application.display_name,
+    rejectionReason
+  });
+
+  revalidatePath("/admin/teacher-applications");
+  revalidatePath("/teacher-application");
+  redirect("/admin/teacher-applications?rejected=1");
 }

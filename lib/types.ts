@@ -1,5 +1,6 @@
 export type UserRole = "teacher" | "student";
 export type BookingStatus = "confirmed" | "canceled";
+export type TeacherApplicationStatus = "pending" | "approved" | "rejected";
 
 export type Profile = {
   id: string;
@@ -13,6 +14,22 @@ export type Teacher = {
   display_name: string;
   bio: string | null;
   meeting_url: string | null;
+};
+
+export type TeacherApplication = {
+  id: string;
+  user_id: string;
+  display_name: string;
+  bio: string | null;
+  meeting_url: string | null;
+  contact_email: string;
+  message: string | null;
+  status: TeacherApplicationStatus;
+  reviewed_by: string | null;
+  reviewed_at: string | null;
+  rejection_reason: string | null;
+  created_at: string;
+  updated_at: string;
 };
 
 export type DateAvailability = {
