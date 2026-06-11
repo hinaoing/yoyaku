@@ -42,7 +42,7 @@ as $$
 declare
   target_application public.teacher_applications%rowtype;
 begin
-  if coalesce(current_setting('request.jwt.claim.role', true), '') <> 'service_role' then
+  if auth.role() <> 'service_role' then
     raise exception 'only service_role can approve teacher applications'
       using errcode = '42501';
   end if;

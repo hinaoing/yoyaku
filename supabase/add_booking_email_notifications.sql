@@ -8,7 +8,7 @@ security definer
 set search_path = public
 as $$
 begin
-  if coalesce(current_setting('request.jwt.claim.role', true), '') = 'service_role'
+  if auth.role() = 'service_role'
     and new.teacher_id is not distinct from old.teacher_id
     and new.student_id is not distinct from old.student_id
     and new.starts_at is not distinct from old.starts_at

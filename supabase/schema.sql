@@ -139,7 +139,7 @@ as $$
 begin
   if new.role is distinct from old.role
     and auth.uid() is not null
-    and coalesce(current_setting('request.jwt.claim.role', true), '') <> 'service_role'
+    and auth.role() <> 'service_role'
   then
     raise exception 'profiles.role cannot be changed by authenticated users'
       using errcode = '42501';
@@ -253,7 +253,7 @@ security definer
 set search_path = public
 as $$
 begin
-  if coalesce(current_setting('request.jwt.claim.role', true), '') = 'service_role'
+  if auth.role() = 'service_role'
     and new.teacher_id is not distinct from old.teacher_id
     and new.student_id is not distinct from old.student_id
     and new.starts_at is not distinct from old.starts_at
@@ -307,7 +307,7 @@ as $$
 declare
   target_application public.teacher_applications%rowtype;
 begin
-  if coalesce(current_setting('request.jwt.claim.role', true), '') <> 'service_role' then
+  if auth.role() <> 'service_role' then
     raise exception 'only service_role can approve teacher applications'
       using errcode = '42501';
   end if;
