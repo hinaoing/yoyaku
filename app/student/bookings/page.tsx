@@ -1,4 +1,5 @@
-import { CalendarX, Clock, ExternalLink } from "lucide-react";
+import { Clock, ExternalLink } from "lucide-react";
+import { CancelBookingButton } from "@/app/student/bookings/cancel-booking-button";
 import { cancelBooking } from "@/lib/actions";
 import { CANCEL_CUTOFF_HOURS } from "@/lib/constants";
 import { requireRole } from "@/lib/supabase/auth";
@@ -59,6 +60,7 @@ export default async function StudentBookingsPage({ searchParams }: StudentBooki
         <section className="grid gap-4">
           {activeBookings.map((booking) => {
             const teacher = Array.isArray(booking.teachers) ? booking.teachers[0] : booking.teachers;
+            const lessonLabel = `${formatDateTimeJa(booking.starts_at)} - ${formatTimeJa(booking.ends_at)}`;
             return (
               <article className="group rounded-xl border border-ink/10 bg-white p-6 shadow-soft transition-all duration-200 hover:border-ink/15 hover:shadow-md" key={booking.id}>
                 <div className="flex flex-wrap items-start justify-between gap-4">
@@ -69,7 +71,7 @@ export default async function StudentBookingsPage({ searchParams }: StudentBooki
                     <div>
                       <p className="text-xs font-medium uppercase tracking-wider text-sumi/50">レッスン日時</p>
                       <h2 className="mt-1 text-xl font-semibold text-ink">
-                        {formatDateTimeJa(booking.starts_at)} - {formatTimeJa(booking.ends_at)}
+                        {lessonLabel}
                       </h2>
                       <p className="mt-1.5 text-sumi/70">{teacher?.display_name ?? "講師"}</p>
                     </div>
@@ -88,10 +90,7 @@ export default async function StudentBookingsPage({ searchParams }: StudentBooki
                 </div>
                 {canCancelBooking(booking.starts_at) ? (
                   <form action={cancelBooking.bind(null, booking.id)} className="mt-5">
-                    <button className="inline-flex items-center gap-2 rounded-lg border border-sakura/25 px-3 py-2 text-sm text-sumi/70 transition-all duration-150 hover:border-sakura/40 hover:bg-sakura/[0.06] hover:text-sakura">
-                      <CalendarX size={15} />
-                      キャンセル
-                    </button>
+                    <CancelBookingButton lessonLabel={lessonLabel} />
                   </form>
                 ) : (
                   <p className="mt-5 text-sm text-sumi/50">キャンセル期限を過ぎています。</p>

@@ -251,11 +251,26 @@ export async function updateAccountProfile(formData: FormData) {
     redirect("/account?error=save");
   }
 
+  const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).maybeSingle();
+
+  if (profile?.role === "teacher") {
+    const { error: teacherError } = await supabase
+      .from("teachers")
+      .update({ display_name: validation.value.fullName || user.email || "講師" })
+      .eq("user_id", user.id);
+
+    if (teacherError) {
+      redirect("/account?error=save");
+    }
+  }
+
   revalidatePath("/", "layout");
   revalidatePath("/account");
   revalidatePath("/student/bookings");
   revalidatePath("/teacher/bookings");
+  revalidatePath("/teacher/settings");
   revalidatePath("/teachers");
+  revalidatePath(`/teachers/${user.id}`);
   redirect("/account?saved=1");
 }
 
