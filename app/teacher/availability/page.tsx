@@ -42,6 +42,8 @@ export default async function AvailabilityPage({ searchParams }: AvailabilityPag
   const errorMessage =
     error === "invalid"
       ? "時間帯が重複しているか、過去または開始時間が30分単位ではない時間が含まれています。"
+      : error === "booked"
+        ? "予約済みのレッスンを含む空き時間は削除・変更できません。先に予約をキャンセルしてください。"
       : error
         ? "空き時間を保存できませんでした。"
         : undefined;

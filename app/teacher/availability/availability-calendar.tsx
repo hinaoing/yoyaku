@@ -3,7 +3,7 @@
 import { Loader2, Plus, Save, Trash2 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useFormStatus } from "react-dom";
-import { slotContainsBooking, type AvailabilityBooking } from "@/lib/availability-bookings";
+import { bookingTimeKey, slotContainsBooking, type AvailabilityBooking } from "@/lib/availability-bookings";
 import { availabilityIssueMessages, validateAvailabilitySlots } from "@/lib/availability-validation";
 import { APP_TIME_ZONE, BOOKING_START_INTERVAL_MINUTES, LESSON_DURATION_MINUTES } from "@/lib/constants";
 import { isJapanHoliday } from "@/lib/japan-holidays";
@@ -69,6 +69,8 @@ export function AvailabilityCalendar({
     () => rows.filter((row) => isEditableSlot(row, todayKey, currentTime)),
     [currentTime, rows, todayKey]
   );
+  const protectedRows = useMemo(() => getMissingProtectedRows(rows, lockedBookings), [lockedBookings, rows]);
+  const submittedRows = useMemo(() => [...editableRows, ...protectedRows], [editableRows, protectedRows]);
   const validationIssues = useMemo(
     () => validateAvailabilitySlots(editableRows, { endDate: rangeEnd, startDate: rangeStart }),
     [editableRows, rangeEnd, rangeStart]
@@ -86,7 +88,8 @@ export function AvailabilityCalendar({
 
     setSelectedDate(date);
     setRows((current) => {
-      const startTime = getNextStartTimeForDate(current, date, todayKey, defaultStartTime);
+      const protectedRowsForDate = getMissingProtectedRows(current, lockedBookings).filter((row) => row.availability_date === date);
+      const startTime = getNextStartTimeForDate([...current, ...protectedRowsForDate], date, todayKey, defaultStartTime);
       const endTime = addMinutesToTime(startTime, LESSON_DURATION_MINUTES);
 
       if (current.some((row) => row.availability_date === date && row.start_time === startTime)) {
@@ -127,7 +130,7 @@ export function AvailabilityCalendar({
 
   const currentMonthDates = dates.filter((date) => date < nextMonthStart);
   const nextMonthDates = dates.filter((date) => date >= nextMonthStart);
-  const selectedRows = groupedRows.get(selectedDate) ?? [];
+  const selectedRows = withProtectedRows(groupedRows.get(selectedDate) ?? [], lockedBookings, selectedDate);
 
   const currentMonthLabel = currentMonthDates[0]
     ? new Intl.DateTimeFormat("ja-JP", { year: "numeric", month: "long", timeZone: APP_TIME_ZONE }).format(new Date(`${currentMonthDates[0]}T00:00:00+09:00`))
@@ -146,7 +149,7 @@ export function AvailabilityCalendar({
     <form action="/teacher/availability/save" className="space-y-5 rounded-xl border border-ink/10 bg-white p-5 shadow-soft" method="post">
       <input name="rangeStart" type="hidden" value={rangeStart} />
       <input name="rangeEnd" type="hidden" value={rangeEnd} />
-      {editableRows.map((row) => (
+      {submittedRows.map((row) => (
         <div key={`hidden-${row.key}`}>
           <input name="slotDate" type="hidden" value={row.availability_date} />
           <input name="slotStart" type="hidden" value={row.start_time} />
@@ -537,6 +540,30 @@ function normalizeHour(hour: string) {
 
 function normalizeMinute(minute: string) {
   return minute === "30" ? "30" : "00";
+}
+
+function protectedRowFromBooking(booking: AvailabilityBooking): Row {
+  const bookingTime = bookingTimeKey(booking);
+
+  return {
+    key: `locked-booking-${booking.starts_at}`,
+    availability_date: bookingTime.availability_date,
+    start_time: bookingTime.start_time,
+    end_time: bookingTime.end_time
+  };
+}
+
+function getMissingProtectedRows(rows: Row[], bookings: AvailabilityBooking[]) {
+  return bookings
+    .filter((booking) => !rows.some((row) => slotContainsBooking(row, booking)))
+    .map(protectedRowFromBooking);
+}
+
+function withProtectedRows(rows: Row[], bookings: AvailabilityBooking[], date: string) {
+  return [
+    ...rows,
+    ...getMissingProtectedRows(rows, bookings).filter((row) => row.availability_date === date)
+  ].sort((a, b) => a.start_time.localeCompare(b.start_time));
 }
 
 function getNextStartTimeForDate(rows: Row[], date: string, todayKey: string, defaultStartTime: string) {
