@@ -5,6 +5,15 @@ import { EmptyState } from "@/components/empty-state";
 import { SupabaseSetup } from "@/components/supabase-setup";
 import { requireUser } from "@/lib/supabase/auth";
 
+type TeacherProfile = {
+  avatar_url: string | null;
+};
+
+function getAvatarUrl(profiles: TeacherProfile | TeacherProfile[] | null) {
+  const profile = Array.isArray(profiles) ? profiles[0] : profiles;
+  return profile?.avatar_url ?? null;
+}
+
 export default async function TeachersPage() {
   if (!hasSupabaseConfig()) {
     return <SupabaseSetup />;
@@ -13,7 +22,7 @@ export default async function TeachersPage() {
   const { supabase } = await requireUser();
   const { data: teachers } = await supabase
     .from("teachers")
-    .select("user_id, display_name, bio, meeting_url")
+    .select("user_id, display_name, bio, meeting_url, profiles(avatar_url)")
     .order("display_name");
 
   return (
@@ -28,36 +37,44 @@ export default async function TeachersPage() {
 
       {teachers && teachers.length > 0 ? (
         <section className="grid gap-4 md:grid-cols-2">
-          {teachers.map((teacher) => (
-            <Link
-              className="group rounded-xl border border-ink/10 bg-white p-6 shadow-soft transition-all duration-200 hover:-translate-y-0.5 hover:border-matcha/30 hover:shadow-lg"
-              href={`/teachers/${teacher.user_id}`}
-              key={teacher.user_id}
-            >
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex items-start gap-4">
-                  <div className="grid size-11 shrink-0 place-items-center rounded-full bg-matcha/10 text-matcha">
-                    <User size={20} />
+          {teachers.map((teacher) => {
+            const avatarUrl = getAvatarUrl(teacher.profiles);
+
+            return (
+              <Link
+                className="group rounded-xl border border-ink/10 bg-white p-6 shadow-soft transition-all duration-200 hover:-translate-y-0.5 hover:border-matcha/30 hover:shadow-lg"
+                href={`/teachers/${teacher.user_id}`}
+                key={teacher.user_id}
+              >
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex items-start gap-4">
+                    {avatarUrl ? (
+                      <img alt="" className="size-11 shrink-0 rounded-full border border-ink/10 object-cover" src={avatarUrl} />
+                    ) : (
+                      <div className="grid size-11 shrink-0 place-items-center rounded-full bg-matcha/10 text-matcha">
+                        <User size={20} />
+                      </div>
+                    )}
+                    <div>
+                      <h2 className="text-lg font-semibold text-ink">{teacher.display_name}</h2>
+                      <p className="mt-1.5 line-clamp-3 whitespace-pre-line text-sm leading-relaxed text-sumi/70">
+                        {teacher.bio || "プロフィールはまだ登録されていません。"}
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <h2 className="text-lg font-semibold text-ink">{teacher.display_name}</h2>
-                    <p className="mt-1.5 line-clamp-2 text-sm leading-relaxed text-sumi/70">
-                      {teacher.bio || "プロフィールはまだ登録されていません。"}
-                    </p>
+                  <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-matcha/10 text-matcha transition-all duration-200 group-hover:bg-matcha group-hover:text-white">
+                    <ArrowRight size={17} />
+                  </span>
+                </div>
+                {teacher.meeting_url ? (
+                  <div className="mt-4 inline-flex items-center gap-2 rounded-full bg-ink/[0.04] px-3 py-1 text-xs font-medium text-sumi/60">
+                    <Video size={14} />
+                    オンライン対応
                   </div>
-                </div>
-                <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-matcha/10 text-matcha transition-all duration-200 group-hover:bg-matcha group-hover:text-white">
-                  <ArrowRight size={17} />
-                </span>
-              </div>
-              {teacher.meeting_url ? (
-                <div className="mt-4 inline-flex items-center gap-2 rounded-full bg-ink/[0.04] px-3 py-1 text-xs font-medium text-sumi/60">
-                  <Video size={14} />
-                  オンライン対応
-                </div>
-              ) : null}
-            </Link>
-          ))}
+                ) : null}
+              </Link>
+            );
+          })}
         </section>
       ) : (
         <EmptyState title="講師がまだ登録されていません">
