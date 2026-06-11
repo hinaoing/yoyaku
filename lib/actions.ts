@@ -20,6 +20,7 @@ import type { AvailabilityInput } from "@/lib/types";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireRole, requireUser } from "@/lib/supabase/auth";
 import { isAdminEmail } from "@/lib/admin";
+import { AVATAR_BUCKET, avatarFileExtension, validateAccountProfileForm } from "@/lib/account-profile-validation";
 import { validateTeacherApplicationForm } from "@/lib/teacher-application-validation";
 
 function ensureTime(value: FormDataEntryValue | null) {
@@ -206,6 +207,56 @@ export async function updateTeacherSettings(formData: FormData) {
   revalidatePath("/teachers");
   revalidatePath(`/teachers/${user.id}`);
   redirect("/teacher/settings?saved=1");
+}
+
+export async function updateAccountProfile(formData: FormData) {
+  const { supabase, user } = await requireUser();
+  const validation = validateAccountProfileForm(formData);
+
+  if (!validation.ok) {
+    redirect(`/account?error=${encodeURIComponent(validation.message)}`);
+  }
+
+  const payload: {
+    avatar_url?: string;
+    full_name: string | null;
+    updated_at: string;
+  } = {
+    full_name: validation.value.fullName || null,
+    updated_at: new Date().toISOString()
+  };
+
+  if (validation.value.avatarFile) {
+    const extension = avatarFileExtension(validation.value.avatarFile);
+    const path = `${user.id}/avatar-${Date.now()}.${extension}`;
+    const { error: uploadError } = await supabase.storage
+      .from(AVATAR_BUCKET)
+      .upload(path, validation.value.avatarFile, {
+        cacheControl: "3600",
+        contentType: validation.value.avatarFile.type,
+        upsert: false
+      });
+
+    if (uploadError) {
+      redirect("/account?error=avatar");
+    }
+
+    const { data } = supabase.storage.from(AVATAR_BUCKET).getPublicUrl(path);
+    payload.avatar_url = data.publicUrl;
+  }
+
+  const { error } = await supabase.from("profiles").update(payload).eq("id", user.id);
+
+  if (error) {
+    redirect("/account?error=save");
+  }
+
+  revalidatePath("/", "layout");
+  revalidatePath("/account");
+  revalidatePath("/student/bookings");
+  revalidatePath("/teacher/bookings");
+  revalidatePath("/teachers");
+  redirect("/account?saved=1");
 }
 
 export async function submitTeacherApplication(formData: FormData) {

@@ -6,7 +6,7 @@ grant all on public.bookings to service_role;
 
 revoke update on public.profiles from authenticated;
 grant select, insert on public.profiles to authenticated;
-grant update (email, full_name) on public.profiles to authenticated;
+grant update (email, full_name, avatar_url, updated_at) on public.profiles to authenticated;
 
 revoke insert on public.bookings from authenticated;
 revoke update on public.bookings from authenticated;

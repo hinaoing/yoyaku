@@ -2,10 +2,8 @@ import "server-only";
 import type { SupabaseClient, User } from "@supabase/supabase-js";
 
 export async function syncProfileForUser(supabase: SupabaseClient, user: User) {
-  const profile = {
-    email: user.email ?? null,
-    full_name: typeof user.user_metadata?.full_name === "string" ? user.user_metadata.full_name : null
-  };
+  const email = user.email ?? null;
+  const fullName = typeof user.user_metadata?.full_name === "string" ? user.user_metadata.full_name : null;
 
   const { data: existing, error: readError } = await supabase
     .from("profiles")
@@ -18,7 +16,7 @@ export async function syncProfileForUser(supabase: SupabaseClient, user: User) {
   }
 
   if (existing) {
-    const { error } = await supabase.from("profiles").update(profile).eq("id", user.id);
+    const { error } = await supabase.from("profiles").update({ email }).eq("id", user.id);
 
     if (error) {
       throw new Error(`Could not update profile: ${error.message}`);
@@ -29,7 +27,8 @@ export async function syncProfileForUser(supabase: SupabaseClient, user: User) {
 
   const { error } = await supabase.from("profiles").insert({
     id: user.id,
-    ...profile,
+    email,
+    full_name: fullName,
     role: "student"
   });
 

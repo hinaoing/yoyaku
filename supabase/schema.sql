@@ -9,7 +9,9 @@ create table public.profiles (
   email text,
   role public.user_role not null default 'student',
   full_name text,
-  created_at timestamptz not null default now()
+  avatar_url text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
 );
 
 create table public.teachers (
@@ -86,7 +88,7 @@ grant all on public.teacher_applications to service_role;
 grant all on public.date_availability to service_role;
 grant all on public.bookings to service_role;
 grant select, insert on public.profiles to authenticated;
-grant update (email, full_name) on public.profiles to authenticated;
+grant update (email, full_name, avatar_url, updated_at) on public.profiles to authenticated;
 grant select on public.teachers to anon, authenticated;
 grant insert, update on public.teachers to authenticated;
 grant select, insert on public.teacher_applications to authenticated;
@@ -114,6 +116,19 @@ $$;
 create trigger on_auth_user_created
   after insert on auth.users
   for each row execute function public.handle_new_user();
+
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values (
+  'avatars',
+  'avatars',
+  true,
+  2097152,
+  array['image/jpeg', 'image/png', 'image/webp']
+)
+on conflict (id) do update
+set public = true,
+    file_size_limit = 2097152,
+    allowed_mime_types = array['image/jpeg', 'image/png', 'image/webp'];
 
 create or replace function public.prevent_authenticated_role_change()
 returns trigger
@@ -341,6 +356,18 @@ $$;
 
 revoke all on function public.approve_teacher_application(uuid, uuid) from public, anon, authenticated;
 grant execute on function public.approve_teacher_application(uuid, uuid) to service_role;
+
+create policy "avatars are publicly readable"
+  on storage.objects for select
+  using (bucket_id = 'avatars');
+
+create policy "users can upload own avatars"
+  on storage.objects for insert
+  to authenticated
+  with check (
+    bucket_id = 'avatars'
+    and (storage.foldername(name))[1] = auth.uid()::text
+  );
 
 create policy "profiles are readable by owner or booked teacher"
   on public.profiles for select

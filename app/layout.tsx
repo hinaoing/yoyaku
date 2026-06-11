@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/server";
 import { hasSupabaseConfig } from "@/lib/supabase/config";
 import type { UserRole } from "@/lib/types";
 import { isAdminEmail } from "@/lib/admin";
+import { AccountMenu } from "@/components/account-menu";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 
@@ -22,6 +23,8 @@ export default async function RootLayout({
 }>) {
   let user: Awaited<ReturnType<Awaited<ReturnType<typeof createClient>>["auth"]["getUser"]>>["data"]["user"] = null;
   let role: UserRole | null = null;
+  let fullName: string | null = null;
+  let avatarUrl: string | null = null;
 
   if (hasSupabaseConfig()) {
     try {
@@ -32,10 +35,12 @@ export default async function RootLayout({
       if (user) {
         const { data: profile } = await supabase
           .from("profiles")
-          .select("role")
+          .select("role, full_name, avatar_url")
           .eq("id", user.id)
           .single();
         role = (profile?.role as UserRole) ?? null;
+        fullName = profile?.full_name ?? null;
+        avatarUrl = profile?.avatar_url ?? null;
       }
     } catch {
       // Auth fetch failed — render as unauthenticated
@@ -65,32 +70,19 @@ export default async function RootLayout({
                   予約
                 </Link>
               )}
-              {user && !isTeacher && (
-                <Link className="rounded-md px-3 py-2 transition-colors duration-150 hover:bg-ink/5 hover:text-ink" href="/teacher-application">
-                  講師になる
-                </Link>
-              )}
               {isTeacher && (
                 <Link className="rounded-md px-3 py-2 transition-colors duration-150 hover:bg-ink/5 hover:text-ink" href="/teacher/bookings">
                   講師
                 </Link>
               )}
-              {isAdmin && (
-                <Link className="rounded-md px-3 py-2 transition-colors duration-150 hover:bg-ink/5 hover:text-ink" href="/admin/teacher-applications">
-                  管理
-                </Link>
-              )}
               {user ? (
-                <div className="flex items-center gap-2">
-                  <span className="hidden max-w-40 truncate rounded-md bg-matcha/10 px-3 py-2 text-matcha sm:inline">
-                    {user.email}
-                  </span>
-                  <form action="/auth/sign-out" method="post">
-                    <button className="rounded-md border border-ink/15 px-3 py-2 transition-colors duration-150 hover:border-ink/25 hover:bg-white" type="submit">
-                      ログアウト
-                    </button>
-                  </form>
-                </div>
+                <AccountMenu
+                  avatarUrl={avatarUrl}
+                  email={user.email}
+                  fullName={fullName}
+                  isAdmin={isAdmin}
+                  isTeacher={isTeacher}
+                />
               ) : (
                 <Link className="rounded-md bg-ink px-3 py-2 text-white transition-colors duration-150 hover:bg-sumi" href="/login">
                   ログイン

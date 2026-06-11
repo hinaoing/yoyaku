@@ -7,6 +7,7 @@ export type Profile = {
   email: string | null;
   role: UserRole;
   full_name: string | null;
+  avatar_url: string | null;
 };
 
 export type Teacher = {
