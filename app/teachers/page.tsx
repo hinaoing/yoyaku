@@ -4,15 +4,7 @@ import { hasSupabaseConfig } from "@/lib/supabase/config";
 import { EmptyState } from "@/components/empty-state";
 import { SupabaseSetup } from "@/components/supabase-setup";
 import { requireUser } from "@/lib/supabase/auth";
-
-type TeacherProfile = {
-  avatar_url: string | null;
-};
-
-function getAvatarUrl(profiles: TeacherProfile | TeacherProfile[] | null) {
-  const profile = Array.isArray(profiles) ? profiles[0] : profiles;
-  return profile?.avatar_url ?? null;
-}
+import { getTeacherAvatarUrlMap } from "@/lib/teacher-avatars";
 
 export default async function TeachersPage() {
   if (!hasSupabaseConfig()) {
@@ -22,8 +14,9 @@ export default async function TeachersPage() {
   const { supabase } = await requireUser();
   const { data: teachers } = await supabase
     .from("teachers")
-    .select("user_id, display_name, bio, meeting_url, profiles(avatar_url)")
+    .select("user_id, display_name, bio, meeting_url")
     .order("display_name");
+  const avatarUrls = await getTeacherAvatarUrlMap((teachers ?? []).map((teacher) => teacher.user_id));
 
   return (
     <div className="space-y-8">
@@ -38,7 +31,7 @@ export default async function TeachersPage() {
       {teachers && teachers.length > 0 ? (
         <section className="grid gap-4 md:grid-cols-2">
           {teachers.map((teacher) => {
-            const avatarUrl = getAvatarUrl(teacher.profiles);
+            const avatarUrl = avatarUrls.get(teacher.user_id) ?? null;
 
             return (
               <Link

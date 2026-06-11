@@ -6,6 +6,7 @@ import { SupabaseSetup } from "@/components/supabase-setup";
 import { hasSupabaseConfig } from "@/lib/supabase/config";
 import { requireUser } from "@/lib/supabase/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getTeacherAvatarUrlMap } from "@/lib/teacher-avatars";
 import {
   formatTokyoDateKey,
   generateSlotsFromDateAvailability,
@@ -13,15 +14,6 @@ import {
   listDatesBetween
 } from "@/lib/time";
 import type { UserRole } from "@/lib/types";
-
-type TeacherProfile = {
-  avatar_url: string | null;
-};
-
-function getAvatarUrl(profiles: TeacherProfile | TeacherProfile[] | null) {
-  const profile = Array.isArray(profiles) ? profiles[0] : profiles;
-  return profile?.avatar_url ?? null;
-}
 
 type TeacherPageProps = {
   params: Promise<{ teacherId: string }>;
@@ -42,7 +34,7 @@ export default async function TeacherPage({ params, searchParams }: TeacherPageP
   const viewerRole = (profile?.role as UserRole | undefined) ?? null;
   const { data: teacher } = await supabase
     .from("teachers")
-    .select("user_id, display_name, bio, meeting_url, profiles(avatar_url)")
+    .select("user_id, display_name, bio, meeting_url")
     .eq("user_id", teacherId)
     .single();
 
@@ -77,13 +69,14 @@ export default async function TeacherPage({ params, searchParams }: TeacherPageP
   ]);
   const dates = listDatesBetween(currentMonthStart, nextMonthEnd);
   const slots = generateSlotsFromDateAvailability(availability ?? [], [...(teacherBookings ?? []), ...(studentBookings ?? [])], now);
+  const avatarUrls = await getTeacherAvatarUrlMap([teacher.user_id]);
   const errorMessage =
     error === "student-required"
       ? "予約するには学生アカウントでログインしてください。"
       : error === "slot-unavailable"
         ? "この時間は予約できません。別の枠を選んでください。"
         : undefined;
-  const avatarUrl = getAvatarUrl(teacher.profiles);
+  const avatarUrl = avatarUrls.get(teacher.user_id) ?? null;
 
   return (
     <div className="space-y-6">
