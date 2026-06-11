@@ -60,7 +60,7 @@ export default async function TeacherSettingsPage({ searchParams }: SettingsPage
             type="url"
           />
         </label>
-        <button className="inline-flex w-fit items-center gap-2 rounded-lg bg-ink px-5 py-3 font-medium text-white transition-all duration-200 hover:bg-sumi active:scale-[0.98]">
+        <button className="inline-flex w-fit items-center gap-2 rounded-lg bg-matcha px-5 py-3 font-medium text-white transition-all duration-200 hover:bg-matcha/90 active:scale-[0.98]">
           <Save size={18} />
           保存する
         </button>

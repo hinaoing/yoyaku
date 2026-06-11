@@ -42,7 +42,7 @@ function SubmitButton({ disabled }: { disabled: boolean }) {
 
   return (
     <button
-      className="inline-flex w-fit items-center gap-2 rounded-lg bg-ink px-5 py-3 font-medium text-white transition-all duration-200 hover:bg-sumi active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
+      className="inline-flex w-fit items-center gap-2 rounded-lg bg-matcha px-5 py-3 font-medium text-white transition-all duration-200 hover:bg-matcha/90 active:scale-[0.98] disabled:cursor-not-allowed disabled:bg-matcha/40 disabled:active:scale-100"
       disabled={disabled || pending}
       type="submit"
     >

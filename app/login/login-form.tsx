@@ -160,7 +160,7 @@ export function LoginForm() {
         )}
 
         <button
-          className="inline-flex w-full items-center justify-center gap-2 rounded-md bg-ink px-4 py-3 font-medium text-white transition-all duration-200 hover:bg-ink/90 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:bg-ink disabled:active:scale-100"
+          className="inline-flex w-full items-center justify-center gap-2 rounded-md bg-matcha px-4 py-3 font-medium text-white transition-all duration-200 hover:bg-matcha/90 active:scale-[0.98] disabled:cursor-not-allowed disabled:bg-matcha/40 disabled:active:scale-100"
           disabled={isSubmitting || cooldownSeconds > 0 || !isConfigured || !isTurnstileConfigured}
           type="submit"
         >

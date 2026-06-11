@@ -130,7 +130,7 @@ export default async function TeacherApplicationPage({ searchParams }: TeacherAp
               placeholder="運営者に伝えたいことがあれば入力してください。"
             />
           </label>
-          <button className="inline-flex w-fit items-center gap-2 rounded-lg bg-ink px-5 py-3 font-medium text-white transition-all duration-200 hover:bg-sumi active:scale-[0.98]">
+          <button className="inline-flex w-fit items-center gap-2 rounded-lg bg-matcha px-5 py-3 font-medium text-white transition-all duration-200 hover:bg-matcha/90 active:scale-[0.98]">
             <Send size={18} />
             申請する
           </button>

@@ -166,7 +166,7 @@ function BookingSubmitButton() {
 
   return (
     <button
-      className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-lg bg-ink px-3 py-2.5 text-sm font-medium text-white transition-all duration-200 hover:bg-sumi active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:bg-ink disabled:active:scale-100"
+      className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-lg bg-matcha px-3 py-2.5 text-sm font-medium text-white transition-all duration-200 hover:bg-matcha/90 active:scale-[0.97] disabled:cursor-not-allowed disabled:bg-matcha/40 disabled:active:scale-100"
       disabled={pending}
     >
       {pending ? <Loader2 className="animate-spin" size={16} /> : <CalendarPlus size={16} />}

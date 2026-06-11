@@ -84,7 +84,7 @@ export default async function RootLayout({
                   isTeacher={isTeacher}
                 />
               ) : (
-                <Link className="rounded-md bg-ink px-3 py-2 text-white transition-colors duration-150 hover:bg-sumi" href="/login">
+                <Link className="rounded-md bg-matcha px-3 py-2 text-white transition-colors duration-150 hover:bg-matcha/90" href="/login">
                   ログイン
                 </Link>
               )}

@@ -9,7 +9,7 @@ export function SupabaseSetup() {
         `.env.example` を参考に `.env.local` を作成し、Supabase URL と anon key を入れると予約データを表示できます。
         その後、`supabase/schema.sql` をSupabase SQL editorで実行してください。
       </p>
-      <Link className="mt-5 inline-flex rounded-md bg-ink px-4 py-3 text-sm font-medium text-white" href="/login">
+      <Link className="mt-5 inline-flex rounded-md bg-matcha px-4 py-3 text-sm font-medium text-white transition-colors duration-150 hover:bg-matcha/90" href="/login">
         ログイン画面を見る
       </Link>
     </section>
