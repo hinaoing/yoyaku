@@ -460,16 +460,18 @@ function SlotEditor({ currentTime, defaultStartTime, invalid, onRemove, onUpdate
   }
 
   return (
-    <div className={invalid ? "relative rounded-lg border border-sakura/30 bg-sakura/[0.04] p-3" : "relative rounded-lg border border-ink/10 bg-white p-3"}>
-      <button
-        aria-label="削除"
-        className="absolute right-3 top-3 grid size-8 place-items-center rounded-lg border border-sakura/25 bg-white text-sakura/70 transition-all duration-150 hover:border-sakura/40 hover:bg-sakura/[0.06] hover:text-sakura"
-        onClick={() => onRemove(row.key)}
-        type="button"
-      >
-        <Trash2 size={14} />
-      </button>
-      <div className="grid grid-cols-[minmax(0,1fr)_5.75rem] items-end gap-3 pr-10">
+    <div className={invalid ? "rounded-lg border border-sakura/30 bg-sakura/[0.04] p-3" : "rounded-lg border border-ink/10 bg-white p-3"}>
+      <div className="mb-2 flex justify-end">
+        <button
+          aria-label="削除"
+          className="grid size-8 place-items-center rounded-lg border border-sakura/25 bg-white text-sakura/70 transition-all duration-150 hover:border-sakura/40 hover:bg-sakura/[0.06] hover:text-sakura"
+          onClick={() => onRemove(row.key)}
+          type="button"
+        >
+          <Trash2 size={14} />
+        </button>
+      </div>
+      <div className="grid grid-cols-[minmax(0,1fr)_6.25rem] items-end gap-3">
         <label className="grid min-w-0 gap-1 text-xs text-sumi">
           開始
           <TimeSelect
