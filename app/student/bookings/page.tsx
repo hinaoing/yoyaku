@@ -24,9 +24,10 @@ export default async function StudentBookingsPage({ searchParams }: StudentBooki
     .from("bookings")
     .select("id, starts_at, ends_at, status, teachers(display_name, meeting_url)")
     .eq("student_id", user.id)
+    .eq("status", "confirmed")
     .order("starts_at", { ascending: true });
 
-  const activeBookings = (bookings ?? []).filter((booking) => booking.status === "confirmed");
+  const activeBookings = bookings ?? [];
 
   return (
     <div className="space-y-6">

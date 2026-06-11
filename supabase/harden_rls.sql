@@ -20,6 +20,10 @@ create unique index if not exists bookings_one_confirmed_student_slot
   on public.bookings (student_id, starts_at)
   where status = 'confirmed';
 
+create index if not exists bookings_confirmed_reminder_idx
+  on public.bookings (starts_at)
+  where status = 'confirmed' and reminder_sent_at is null;
+
 create or replace function public.prevent_authenticated_role_change()
 returns trigger
 language plpgsql

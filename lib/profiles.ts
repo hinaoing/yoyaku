@@ -7,7 +7,7 @@ export async function syncProfileForUser(supabase: SupabaseClient, user: User) {
 
   const { data: existing, error: readError } = await supabase
     .from("profiles")
-    .select("id")
+    .select("id, email")
     .eq("id", user.id)
     .maybeSingle();
 
@@ -16,6 +16,10 @@ export async function syncProfileForUser(supabase: SupabaseClient, user: User) {
   }
 
   if (existing) {
+    if (existing.email === email) {
+      return;
+    }
+
     const { error } = await supabase.from("profiles").update({ email }).eq("id", user.id);
 
     if (error) {

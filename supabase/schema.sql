@@ -75,6 +75,10 @@ create unique index bookings_one_confirmed_student_slot
   on public.bookings (student_id, starts_at)
   where status = 'confirmed';
 
+create index bookings_confirmed_reminder_idx
+  on public.bookings (starts_at)
+  where status = 'confirmed' and reminder_sent_at is null;
+
 alter table public.profiles enable row level security;
 alter table public.teachers enable row level security;
 alter table public.teacher_applications enable row level security;
