@@ -45,7 +45,7 @@ export default async function AdminTeacherApplicationsPage({ searchParams }: Adm
   const adminSupabase = createAdminClient();
   const { data: applications } = await adminSupabase
     .from("teacher_applications")
-    .select("id, user_id, display_name, bio, meeting_url, contact_email, message, status, rejection_reason, created_at, updated_at, profiles(email, full_name)")
+    .select("id, user_id, display_name, bio, meeting_url, contact_email, message, status, rejection_reason, created_at, updated_at, profiles!teacher_applications_user_id_fkey(email, full_name)")
     .order("created_at", { ascending: false })
     .returns<ApplicationRow[]>();
 

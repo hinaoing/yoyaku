@@ -402,7 +402,7 @@ export async function approveTeacherApplication(applicationId: string) {
   const adminSupabase = createAdminClient();
   const { data: application } = await adminSupabase
     .from("teacher_applications")
-    .select("id, user_id, display_name, contact_email, profiles(email)")
+    .select("id, user_id, display_name, contact_email, profiles!teacher_applications_user_id_fkey(email)")
     .eq("id", applicationId)
     .maybeSingle();
 
@@ -451,7 +451,7 @@ export async function rejectTeacherApplication(formData: FormData) {
   const adminSupabase = createAdminClient();
   const { data: application } = await adminSupabase
     .from("teacher_applications")
-    .select("id, display_name, contact_email, profiles(email)")
+    .select("id, display_name, contact_email, profiles!teacher_applications_user_id_fkey(email)")
     .eq("id", applicationId)
     .maybeSingle();
 
