@@ -472,7 +472,7 @@ function SlotEditor({ currentTime, defaultStartTime, invalid, onRemove, onUpdate
         </label>
         <div className="grid gap-1 text-xs text-sumi">
           終了
-          <div className="rounded-lg border border-ink/10 bg-paper/70 px-2 py-2 text-center text-sm font-medium text-sumi/70">
+          <div className="flex h-[38px] items-center justify-center rounded-lg border border-ink/10 bg-paper/70 px-2 text-center text-sm font-medium text-sumi/70">
             {row.end_time}
           </div>
         </div>
@@ -495,7 +495,7 @@ function TimeSelect({ min, onChange, value }: { min?: string; onChange: (value: 
   const hour = normalizeHour(rawHour);
   const minute = normalizeMinute(rawMinute);
   const selectClass =
-    "w-[4.75rem] rounded-lg border border-ink/15 bg-white py-2 pl-3 pr-8 text-sm outline-none ring-matcha/30 transition-all duration-200 focus:border-matcha/50 focus:ring-4";
+    "w-[4.75rem] h-[38px] rounded-lg border border-ink/15 bg-white pl-3 pr-8 text-sm outline-none ring-matcha/30 transition-all duration-200 focus:border-matcha/50 focus:ring-4";
 
   function changeTime(part: "hour" | "minute", nextValue: string) {
     onChange(part === "hour" ? `${nextValue}:${minute}` : `${hour}:${nextValue}`);
