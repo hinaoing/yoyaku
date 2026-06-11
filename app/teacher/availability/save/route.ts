@@ -1,6 +1,8 @@
 import { revalidatePath } from "next/cache";
 import { NextResponse } from "next/server";
+import { protectedBookingViolations } from "@/lib/availability-bookings";
 import { validateAvailabilitySlots } from "@/lib/availability-validation";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { requireRole } from "@/lib/supabase/auth";
 import { formatTokyoDateKey, formatTokyoTimeKey } from "@/lib/time";
 import type { AvailabilityInput } from "@/lib/types";
@@ -39,6 +41,23 @@ export async function POST(request: Request) {
 
   if (validationIssues.length > 0) {
     return redirectTo(request, "/teacher/availability?error=invalid");
+  }
+
+  const adminSupabase = createAdminClient();
+  const { data: bookedLessons, error: bookingError } = await adminSupabase
+    .from("bookings")
+    .select("starts_at, ends_at")
+    .eq("teacher_id", user.id)
+    .eq("status", "confirmed")
+    .gte("starts_at", now.toISOString())
+    .lte("starts_at", new Date(`${endDate}T23:59:59+09:00`).toISOString());
+
+  if (bookingError) {
+    return redirectTo(request, "/teacher/availability?error=save");
+  }
+
+  if (protectedBookingViolations(slots, bookedLessons ?? []).length > 0) {
+    return redirectTo(request, "/teacher/availability?error=booked");
   }
 
   const futureDeleteStart = startDate > todayKey ? startDate : todayKey;

@@ -3,6 +3,7 @@
 import { Loader2, Plus, Save, Trash2 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useFormStatus } from "react-dom";
+import { slotContainsBooking, type AvailabilityBooking } from "@/lib/availability-bookings";
 import { availabilityIssueMessages, validateAvailabilitySlots } from "@/lib/availability-validation";
 import { APP_TIME_ZONE, BOOKING_START_INTERVAL_MINUTES, LESSON_DURATION_MINUTES } from "@/lib/constants";
 import { isJapanHoliday } from "@/lib/japan-holidays";
@@ -25,6 +26,7 @@ type AvailabilityCalendarProps = {
   todayKey: string;
   currentTime: string;
   defaultStartTime: string;
+  lockedBookings: AvailabilityBooking[];
 };
 
 const WEEKDAYS = ["日", "月", "火", "水", "木", "金", "土"];
@@ -39,7 +41,8 @@ export function AvailabilityCalendar({
   rangeEnd,
   todayKey,
   currentTime,
-  defaultStartTime
+  defaultStartTime,
+  lockedBookings
 }: AvailabilityCalendarProps) {
   const [rows, setRows] = useState<Row[]>(
     initialSlots.map((slot) => ({
@@ -215,6 +218,7 @@ export function AvailabilityCalendar({
           defaultStartTime={defaultStartTime}
           invalidRowKeys={invalidRowKeys}
           issueMessages={issueMessages}
+          lockedBookings={lockedBookings}
           onAdd={addRow}
           onRemove={removeRow}
           onUpdate={updateRow}
@@ -365,6 +369,7 @@ type DayEditorProps = {
   defaultStartTime: string;
   invalidRowKeys: Set<string | undefined>;
   issueMessages: string[];
+  lockedBookings: AvailabilityBooking[];
   onAdd: (date: string) => void;
   onRemove: (key: string) => void;
   onUpdate: (key: string, field: "start_time" | "end_time", value: string) => void;
@@ -378,6 +383,7 @@ function DayEditor({
   defaultStartTime,
   invalidRowKeys,
   issueMessages,
+  lockedBookings,
   onAdd,
   onRemove,
   onUpdate,
@@ -426,6 +432,7 @@ function DayEditor({
             defaultStartTime={defaultStartTime}
             invalid={invalidRowKeys.has(row.key)}
             key={row.key}
+            locked={lockedBookings.some((booking) => slotContainsBooking(row, booking))}
             onRemove={onRemove}
             onUpdate={onUpdate}
             row={row}
@@ -441,20 +448,22 @@ type SlotEditorProps = {
   currentTime: string;
   defaultStartTime: string;
   invalid: boolean;
+  locked: boolean;
   onRemove: (key: string) => void;
   onUpdate: (key: string, field: "start_time" | "end_time", value: string) => void;
   row: Row;
   todayKey: string;
 };
 
-function SlotEditor({ currentTime, defaultStartTime, invalid, onRemove, onUpdate, row, todayKey }: SlotEditorProps) {
-  const editable = isEditableSlot(row, todayKey, currentTime);
+function SlotEditor({ currentTime, defaultStartTime, invalid, locked, onRemove, onUpdate, row, todayKey }: SlotEditorProps) {
+  const editable = isEditableSlot(row, todayKey, currentTime) && !locked;
   const minTime = row.availability_date === todayKey ? defaultStartTime : undefined;
 
   if (!editable) {
     return (
       <div className="rounded-md bg-sumi/[0.06] px-3 py-2 text-sm text-sumi/45">
         {row.start_time}-{row.end_time}
+        {locked ? <span className="ml-2 rounded-full bg-matcha/10 px-2 py-0.5 text-xs font-medium text-matcha">予約済み</span> : null}
       </div>
     );
   }

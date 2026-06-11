@@ -4,6 +4,7 @@ import { formatTokyoDateKey, formatTokyoTimeKey, getCurrentAndNextMonthRange, li
 import { StatusBanner } from "@/components/status-banner";
 import { SupabaseSetup } from "@/components/supabase-setup";
 import { AvailabilityCalendar } from "@/app/teacher/availability/availability-calendar";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 type AvailabilityPageProps = {
   searchParams: Promise<{ saved?: string; error?: string }>;
@@ -18,14 +19,24 @@ export default async function AvailabilityPage({ searchParams }: AvailabilityPag
   const { supabase, user } = await requireRole("teacher");
   const now = new Date();
   const { currentMonthStart, nextMonthStart, nextMonthEnd } = getCurrentAndNextMonthRange(now);
-  const { data: availability } = await supabase
-    .from("date_availability")
-    .select("id, teacher_id, availability_date, start_time, end_time")
-    .eq("teacher_id", user.id)
-    .gte("availability_date", currentMonthStart)
-    .lte("availability_date", nextMonthEnd)
-    .order("availability_date")
-    .order("start_time");
+  const adminSupabase = createAdminClient();
+  const [{ data: availability }, { data: bookedLessons }] = await Promise.all([
+    supabase
+      .from("date_availability")
+      .select("id, teacher_id, availability_date, start_time, end_time")
+      .eq("teacher_id", user.id)
+      .gte("availability_date", currentMonthStart)
+      .lte("availability_date", nextMonthEnd)
+      .order("availability_date")
+      .order("start_time"),
+    adminSupabase
+      .from("bookings")
+      .select("starts_at, ends_at")
+      .eq("teacher_id", user.id)
+      .eq("status", "confirmed")
+      .gte("starts_at", now.toISOString())
+      .lte("starts_at", new Date(`${nextMonthEnd}T23:59:59+09:00`).toISOString())
+  ]);
   const dates = listDatesBetween(currentMonthStart, nextMonthEnd);
 
   const errorMessage =
@@ -52,6 +63,7 @@ export default async function AvailabilityPage({ searchParams }: AvailabilityPag
         dates={dates}
         defaultStartTime={roundUpToNextLessonTime(now)}
         initialSlots={availability ?? []}
+        lockedBookings={bookedLessons ?? []}
         nextMonthStart={nextMonthStart}
         rangeEnd={nextMonthEnd}
         rangeStart={currentMonthStart}

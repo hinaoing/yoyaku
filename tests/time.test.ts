@@ -6,6 +6,7 @@ import {
   tokyoDateTimeToUtcIso
 } from "@/lib/time";
 import { validateAvailabilitySlots } from "@/lib/availability-validation";
+import { protectedBookingViolations, slotContainsBooking } from "@/lib/availability-bookings";
 import { isJapanHoliday } from "@/lib/japan-holidays";
 import { checkRateLimit } from "@/lib/rate-limit";
 import type { Booking, DateAvailability } from "@/lib/types";
@@ -247,6 +248,22 @@ describe("availability validation", () => {
     );
 
     expect(issues).toEqual([]);
+  });
+
+  it("protects availability slots that already contain confirmed bookings", () => {
+    const booking = {
+      starts_at: "2026-06-13T09:00:00.000Z",
+      ends_at: "2026-06-13T09:25:00.000Z"
+    };
+
+    expect(slotContainsBooking({ availability_date: "2026-06-13", start_time: "18:00", end_time: "18:55" }, booking)).toBe(true);
+    expect(protectedBookingViolations([], [booking])).toHaveLength(1);
+    expect(
+      protectedBookingViolations(
+        [{ availability_date: "2026-06-13", start_time: "18:00", end_time: "18:55" }],
+        [booking]
+      )
+    ).toEqual([]);
   });
 });
 
