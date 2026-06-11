@@ -103,6 +103,49 @@ export async function cancelBooking(bookingId: string) {
   redirect("/student/bookings?canceled=1");
 }
 
+export async function cancelTeacherBooking(bookingId: string) {
+  const { user } = await requireRole("teacher");
+  const adminSupabase = createAdminClient();
+  const { data: booking, error } = await adminSupabase
+    .from("bookings")
+    .select("id, starts_at, teacher_id, status")
+    .eq("id", bookingId)
+    .maybeSingle();
+
+  if (error || !booking) {
+    redirect("/teacher/bookings?error=not-found");
+  }
+
+  if (booking.teacher_id !== user.id) {
+    redirect("/teacher/bookings?error=forbidden");
+  }
+
+  if (booking.status !== "confirmed") {
+    redirect("/teacher/bookings?error=cancel");
+  }
+
+  if (!canCancelBooking(booking.starts_at)) {
+    redirect(`/teacher/bookings?error=cutoff&hours=${CANCEL_CUTOFF_HOURS}`);
+  }
+
+  const { error: cancelError } = await adminSupabase
+    .from("bookings")
+    .update({ status: "canceled", canceled_at: new Date().toISOString() })
+    .eq("id", bookingId)
+    .eq("status", "confirmed");
+
+  if (cancelError) {
+    redirect("/teacher/bookings?error=cancel");
+  }
+
+  await sendBookingCanceledEmails(adminSupabase, bookingId);
+
+  revalidatePath("/teacher/bookings");
+  revalidatePath("/student/bookings");
+  revalidatePath(`/teachers/${user.id}`);
+  redirect("/teacher/bookings?canceled=1");
+}
+
 export async function upsertDateAvailability(
   slots: AvailabilityInput[],
   startDate: string,

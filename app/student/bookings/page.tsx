@@ -1,5 +1,5 @@
 import { Clock, ExternalLink } from "lucide-react";
-import { CancelBookingButton } from "@/app/student/bookings/cancel-booking-button";
+import { CancelBookingButton } from "@/components/cancel-booking-button";
 import { cancelBooking } from "@/lib/actions";
 import { CANCEL_CUTOFF_HOURS } from "@/lib/constants";
 import { requireRole } from "@/lib/supabase/auth";

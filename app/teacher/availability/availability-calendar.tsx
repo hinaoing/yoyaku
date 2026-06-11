@@ -200,7 +200,7 @@ export function AvailabilityCalendar({
       </div>
 
       {/* Calendar + Day editor sidebar */}
-      <div className="grid min-w-0 gap-5 lg:grid-cols-[minmax(0,1fr)_280px]">
+      <div className="grid min-w-0 gap-5 lg:grid-cols-[minmax(0,1fr)_360px]">
         <MonthSection
           currentTime={currentTime}
           dates={activeDates}
@@ -460,26 +460,24 @@ function SlotEditor({ currentTime, defaultStartTime, invalid, onRemove, onUpdate
   }
 
   return (
-    <div className={invalid ? "rounded-lg border border-sakura/30 bg-sakura/[0.04] p-3" : "rounded-lg border border-ink/10 bg-white p-3"}>
-      <div className="grid gap-3">
-        <div className="grid grid-cols-[minmax(0,1fr)_auto] items-end gap-3">
-          <label className="grid gap-1 text-xs text-sumi">
-            開始
-            <TimeSelect
-              min={minTime}
-              onChange={(value) => onUpdate(row.key, "start_time", value)}
-              value={row.start_time}
-            />
-          </label>
-          <button
-            aria-label="削除"
-            className="grid size-9 place-items-center rounded-lg border border-sakura/25 text-sakura/70 transition-all duration-150 hover:border-sakura/40 hover:bg-sakura/[0.06] hover:text-sakura"
-            onClick={() => onRemove(row.key)}
-            type="button"
-          >
-            <Trash2 size={15} />
-          </button>
-        </div>
+    <div className={invalid ? "relative rounded-lg border border-sakura/30 bg-sakura/[0.04] p-3" : "relative rounded-lg border border-ink/10 bg-white p-3"}>
+      <button
+        aria-label="削除"
+        className="absolute right-3 top-3 grid size-8 place-items-center rounded-lg border border-sakura/25 bg-white text-sakura/70 transition-all duration-150 hover:border-sakura/40 hover:bg-sakura/[0.06] hover:text-sakura"
+        onClick={() => onRemove(row.key)}
+        type="button"
+      >
+        <Trash2 size={14} />
+      </button>
+      <div className="grid grid-cols-[minmax(0,1fr)_5.75rem] items-end gap-3 pr-10">
+        <label className="grid min-w-0 gap-1 text-xs text-sumi">
+          開始
+          <TimeSelect
+            min={minTime}
+            onChange={(value) => onUpdate(row.key, "start_time", value)}
+            value={row.start_time}
+          />
+        </label>
         <div className="grid gap-1 text-xs text-sumi">
           終了
           <div className="rounded-lg border border-ink/10 bg-paper/70 px-3 py-2 text-sm font-medium text-sumi/70">
