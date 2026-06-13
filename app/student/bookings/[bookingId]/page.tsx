@@ -7,6 +7,7 @@ import { cancelBooking } from "@/lib/actions";
 import { CANCEL_CUTOFF_HOURS } from "@/lib/constants";
 import { hasSupabaseConfig } from "@/lib/supabase/config";
 import { requireRole } from "@/lib/supabase/auth";
+import { getTeacherAvatarUrlMap } from "@/lib/teacher-avatars";
 import { canCancelBooking, formatDateTimeJa, formatTimeJa } from "@/lib/time";
 import { SupabaseSetup } from "@/components/supabase-setup";
 
@@ -26,7 +27,7 @@ export default async function StudentBookingDetailPage({ params, searchParams }:
   const { supabase, user } = await requireRole("student");
   const { data: booking } = await supabase
     .from("bookings")
-    .select("id, starts_at, ends_at, status, canceled_at, teachers(display_name, meeting_url)")
+    .select("id, starts_at, ends_at, status, canceled_at, teachers(user_id, display_name, meeting_url)")
     .eq("id", bookingId)
     .eq("student_id", user.id)
     .maybeSingle();
@@ -36,6 +37,8 @@ export default async function StudentBookingDetailPage({ params, searchParams }:
   }
 
   const teacher = Array.isArray(booking.teachers) ? booking.teachers[0] : booking.teachers;
+  const teacherAvatarUrls = await getTeacherAvatarUrlMap(teacher?.user_id ? [teacher.user_id] : []);
+  const teacherAvatarUrl = teacher?.user_id ? (teacherAvatarUrls.get(teacher.user_id) ?? null) : null;
   const lessonLabel = `${formatDateTimeJa(booking.starts_at)} - ${formatTimeJa(booking.ends_at)}`;
   const isConfirmed = booking.status === "confirmed";
 
@@ -77,9 +80,13 @@ export default async function StudentBookingDetailPage({ params, searchParams }:
             </div>
           </div>
           <div className="flex items-start gap-3">
-            <span className="grid size-10 place-items-center rounded-full bg-matcha/10 text-matcha">
-              <UserRound size={18} />
-            </span>
+            {teacherAvatarUrl ? (
+              <img alt="" className="size-10 shrink-0 rounded-full border border-ink/10 object-cover" src={teacherAvatarUrl} />
+            ) : (
+              <span className="grid size-10 place-items-center rounded-full bg-matcha/10 text-matcha">
+                <UserRound size={18} />
+              </span>
+            )}
             <div>
               <p className="text-xs font-medium uppercase tracking-wider text-sumi/50">講師</p>
               <p className="mt-1 text-lg font-semibold text-ink">{teacher?.display_name ?? "講師"}</p>

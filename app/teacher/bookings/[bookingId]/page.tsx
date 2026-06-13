@@ -15,6 +15,12 @@ type TeacherBookingDetailPageProps = {
   searchParams: Promise<{ error?: string }>;
 };
 
+type StudentProfile = {
+  avatar_url: string | null;
+  email: string | null;
+  full_name: string | null;
+};
+
 export default async function TeacherBookingDetailPage({ params, searchParams }: TeacherBookingDetailPageProps) {
   const { bookingId } = await params;
   const { error } = await searchParams;
@@ -26,7 +32,7 @@ export default async function TeacherBookingDetailPage({ params, searchParams }:
   const { supabase, user } = await requireRole("teacher");
   const { data: booking } = await supabase
     .from("bookings")
-    .select("id, starts_at, ends_at, status, canceled_at, profiles(full_name, email), teachers(meeting_url)")
+    .select("id, starts_at, ends_at, status, canceled_at, profiles(full_name, email, avatar_url), teachers(meeting_url)")
     .eq("id", bookingId)
     .eq("teacher_id", user.id)
     .maybeSingle();
@@ -35,7 +41,7 @@ export default async function TeacherBookingDetailPage({ params, searchParams }:
     return <EmptyState title="予約が見つかりません">予約一覧からもう一度選択してください。</EmptyState>;
   }
 
-  const student = Array.isArray(booking.profiles) ? booking.profiles[0] : booking.profiles;
+  const student = (Array.isArray(booking.profiles) ? booking.profiles[0] : booking.profiles) as StudentProfile | null;
   const teacher = Array.isArray(booking.teachers) ? booking.teachers[0] : booking.teachers;
   const studentName = student?.full_name || student?.email || "生徒";
   const lessonLabel = `${formatDateTimeJa(booking.starts_at)} - ${formatTimeJa(booking.ends_at)}`;
@@ -76,9 +82,13 @@ export default async function TeacherBookingDetailPage({ params, searchParams }:
             </div>
           </div>
           <div className="flex items-start gap-3">
-            <span className="grid size-10 place-items-center rounded-full bg-matcha/10 text-matcha">
-              <UserRound size={18} />
-            </span>
+            {student?.avatar_url ? (
+              <img alt="" className="size-10 shrink-0 rounded-full border border-ink/10 object-cover" src={student.avatar_url} />
+            ) : (
+              <span className="grid size-10 place-items-center rounded-full bg-matcha/10 text-matcha">
+                <UserRound size={18} />
+              </span>
+            )}
             <div>
               <p className="text-xs font-medium uppercase tracking-wider text-sumi/50">生徒</p>
               <p className="mt-1 text-lg font-semibold text-ink">{studentName}</p>
