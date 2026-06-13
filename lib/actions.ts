@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { writeAuditLog } from "@/lib/audit-logs";
 import { CANCEL_CUTOFF_HOURS, LESSON_DURATION_MINUTES } from "@/lib/constants";
 import { sendBookingCanceledEmails, sendBookingConfirmedEmails } from "@/lib/email/booking-notifications";
 import {
@@ -41,7 +42,7 @@ export async function createBooking(teacherId: string, startsAt: string) {
     .maybeSingle();
 
   if (studentConflict) {
-    redirect(`/teachers/${teacherId}?error=slot-unavailable`);
+    redirect(`/teachers/${teacherId}?error=student-conflict`);
   }
 
   const { data: createdBooking, error } = await adminSupabase
@@ -57,8 +58,18 @@ export async function createBooking(teacherId: string, startsAt: string) {
     .single();
 
   if (error) {
-    redirect(`/teachers/${teacherId}?error=slot-unavailable`);
+    const message = `${error.code ?? ""} ${error.message ?? ""}`.toLowerCase();
+    const reason = message.includes("student") ? "student-conflict" : message.includes("duplicate") || message.includes("teacher") ? "teacher-booked" : "slot-unavailable";
+    redirect(`/teachers/${teacherId}?error=${reason}`);
   }
+
+  await writeAuditLog(adminSupabase, {
+    action: "booking.create",
+    actorId: user.id,
+    metadata: { endsAt, startsAt, studentId: user.id, teacherId },
+    targetId: createdBooking.id,
+    targetType: "booking"
+  });
 
   await sendBookingConfirmedEmails(adminSupabase, createdBooking.id);
 
@@ -98,6 +109,14 @@ export async function cancelBooking(bookingId: string) {
     redirect("/student/bookings?error=cancel");
   }
 
+  await writeAuditLog(adminSupabase, {
+    action: "booking.cancel",
+    actorId: user.id,
+    metadata: { canceledBy: "student", startsAt: booking.starts_at, studentId: booking.student_id, teacherId: booking.teacher_id },
+    targetId: bookingId,
+    targetType: "booking"
+  });
+
   await sendBookingCanceledEmails(adminSupabase, bookingId);
 
   revalidatePath("/student/bookings");
@@ -110,7 +129,7 @@ export async function cancelTeacherBooking(bookingId: string) {
   const adminSupabase = createAdminClient();
   const { data: booking, error } = await adminSupabase
     .from("bookings")
-    .select("id, starts_at, teacher_id, status")
+    .select("id, starts_at, teacher_id, student_id, status")
     .eq("id", bookingId)
     .maybeSingle();
 
@@ -139,6 +158,14 @@ export async function cancelTeacherBooking(bookingId: string) {
   if (cancelError) {
     redirect("/teacher/bookings?error=cancel");
   }
+
+  await writeAuditLog(adminSupabase, {
+    action: "booking.cancel",
+    actorId: user.id,
+    metadata: { canceledBy: "teacher", startsAt: booking.starts_at, studentId: booking.student_id, teacherId: booking.teacher_id },
+    targetId: bookingId,
+    targetType: "booking"
+  });
 
   await sendBookingCanceledEmails(adminSupabase, bookingId);
 
@@ -221,6 +248,14 @@ export async function upsertDateAvailability(
       redirect("/teacher/availability?error=save");
     }
   }
+
+  await writeAuditLog(adminSupabase, {
+    action: "availability.update",
+    actorId: user.id,
+    metadata: { endDate, slotCount: slots.length, startDate },
+    targetId: user.id,
+    targetType: "date_availability"
+  });
 
   revalidatePath("/teacher/availability");
   revalidatePath(`/teachers/${user.id}`);

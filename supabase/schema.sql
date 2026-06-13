@@ -67,6 +67,16 @@ create table public.bookings (
   check (starts_at < ends_at)
 );
 
+create table public.audit_logs (
+  id uuid primary key default gen_random_uuid(),
+  actor_id uuid references public.profiles(id) on delete set null,
+  action text not null,
+  target_type text not null,
+  target_id uuid,
+  metadata jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now()
+);
+
 create unique index bookings_one_confirmed_slot
   on public.bookings (teacher_id, starts_at)
   where status = 'confirmed';
@@ -79,11 +89,18 @@ create index bookings_confirmed_reminder_idx
   on public.bookings (starts_at)
   where status = 'confirmed' and reminder_sent_at is null;
 
+create index audit_logs_created_at_idx
+  on public.audit_logs (created_at desc);
+
+create index audit_logs_target_idx
+  on public.audit_logs (target_type, target_id);
+
 alter table public.profiles enable row level security;
 alter table public.teachers enable row level security;
 alter table public.teacher_applications enable row level security;
 alter table public.date_availability enable row level security;
 alter table public.bookings enable row level security;
+alter table public.audit_logs enable row level security;
 
 grant usage on schema public to anon, authenticated, service_role;
 grant all on public.profiles to service_role;
@@ -91,6 +108,7 @@ grant all on public.teachers to service_role;
 grant all on public.teacher_applications to service_role;
 grant all on public.date_availability to service_role;
 grant all on public.bookings to service_role;
+grant all on public.audit_logs to service_role;
 grant select, insert on public.profiles to authenticated;
 grant update (email, full_name, avatar_url, updated_at) on public.profiles to authenticated;
 grant select on public.teachers to anon, authenticated;

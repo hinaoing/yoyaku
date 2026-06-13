@@ -1,5 +1,6 @@
 import { revalidatePath } from "next/cache";
 import { NextResponse } from "next/server";
+import { writeAuditLog } from "@/lib/audit-logs";
 import { LESSON_DURATION_MINUTES } from "@/lib/constants";
 import { sendBookingConfirmedEmails } from "@/lib/email/booking-notifications";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -20,7 +21,7 @@ export async function POST(request: Request, { params }: BookingRouteContext) {
   const startsAt = formData.get("startsAt");
 
   if (typeof startsAt !== "string" || new Date(startsAt).getTime() <= Date.now()) {
-    return redirectTo(request, `/teachers/${teacherId}?error=slot-unavailable`);
+    return redirectTo(request, `/teachers/${teacherId}?error=past-slot`);
   }
 
   const supabase = await createClient();
@@ -67,9 +68,19 @@ export async function POST(request: Request, { params }: BookingRouteContext) {
       .eq("status", "confirmed")
       .maybeSingle()
   ]);
+  const offeredStarts = new Set(generateSlotsFromDateAvailability(availability ?? [], [], now).map((slot) => slot.startsAt));
+  const teacherBookedStarts = new Set((teacherBookings ?? []).map((booking) => new Date(booking.starts_at).toISOString()));
   const availableStarts = new Set(generateSlotsFromDateAvailability(availability ?? [], teacherBookings ?? [], now).map((slot) => slot.startsAt));
 
-  if (studentConflict || !availableStarts.has(startsAt)) {
+  if (studentConflict) {
+    return redirectTo(request, `/teachers/${teacherId}?error=student-conflict`);
+  }
+
+  if (teacherBookedStarts.has(new Date(startsAt).toISOString())) {
+    return redirectTo(request, `/teachers/${teacherId}?error=teacher-booked`);
+  }
+
+  if (!offeredStarts.has(startsAt) || !availableStarts.has(startsAt)) {
     return redirectTo(request, `/teachers/${teacherId}?error=slot-unavailable`);
   }
 
@@ -87,8 +98,18 @@ export async function POST(request: Request, { params }: BookingRouteContext) {
     .single();
 
   if (error) {
-    return redirectTo(request, `/teachers/${teacherId}?error=slot-unavailable`);
+    const message = `${error.code ?? ""} ${error.message ?? ""}`.toLowerCase();
+    const reason = message.includes("student") ? "student-conflict" : message.includes("duplicate") || message.includes("teacher") ? "teacher-booked" : "slot-unavailable";
+    return redirectTo(request, `/teachers/${teacherId}?error=${reason}`);
   }
+
+  await writeAuditLog(adminSupabase, {
+    action: "booking.create",
+    actorId: user.id,
+    metadata: { endsAt, startsAt, studentId: user.id, teacherId },
+    targetId: createdBooking.id,
+    targetType: "booking"
+  });
 
   await sendBookingConfirmedEmails(adminSupabase, createdBooking.id);
 

@@ -7,6 +7,7 @@ delete from storage.objects where bucket_id = 'avatars';
 delete from storage.buckets where id = 'avatars';
 
 drop table if exists public.bookings cascade;
+drop table if exists public.audit_logs cascade;
 drop table if exists public.date_availability cascade;
 drop table if exists public.weekly_availability cascade;
 drop table if exists public.teacher_applications cascade;

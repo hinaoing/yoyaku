@@ -1,6 +1,7 @@
 import { revalidatePath } from "next/cache";
 import { NextResponse } from "next/server";
 import { protectedBookingViolations } from "@/lib/availability-bookings";
+import { writeAuditLog } from "@/lib/audit-logs";
 import { validateAvailabilitySlots } from "@/lib/availability-validation";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireRole } from "@/lib/supabase/auth";
@@ -102,6 +103,14 @@ export async function POST(request: Request) {
       return redirectTo(request, "/teacher/availability?error=save");
     }
   }
+
+  await writeAuditLog(adminSupabase, {
+    action: "availability.update",
+    actorId: user.id,
+    metadata: { endDate, slotCount: slots.length, startDate },
+    targetId: user.id,
+    targetType: "date_availability"
+  });
 
   revalidatePath("/teacher/availability");
   revalidatePath(`/teachers/${user.id}`);

@@ -73,6 +73,12 @@ export default async function TeacherPage({ params, searchParams }: TeacherPageP
   const errorMessage =
     error === "student-required"
       ? "予約するには学生アカウントでログインしてください。"
+      : error === "student-conflict"
+        ? "同じ時間にすでに別の予約があります。別の時間を選んでください。"
+      : error === "teacher-booked"
+        ? "この時間は他の生徒に予約されました。別の時間を選んでください。"
+      : error === "past-slot"
+        ? "過去の時間、または開始済みの時間は予約できません。別の時間を選んでください。"
       : error === "slot-unavailable"
         ? "この時間は予約できません。別の枠を選んでください。"
         : undefined;
