@@ -2,6 +2,7 @@ import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { formatDateTimeJa, formatTimeJa } from "@/lib/time";
+import { CANCEL_CUTOFF_HOURS } from "@/lib/constants";
 import { sendEmail } from "@/lib/email/resend";
 
 type BookingRow = {
@@ -57,15 +58,38 @@ function link(url: string, label: string) {
   return `<a href="${escapeHtml(url)}" style="color:#5f7f52">${escapeHtml(label)}</a>`;
 }
 
+function button(url: string, label: string) {
+  return `<a href="${escapeHtml(url)}" style="display:inline-block;background:#5f7f52;color:#ffffff;padding:12px 18px;border-radius:8px;text-decoration:none;font-weight:700">${escapeHtml(label)}</a>`;
+}
+
 function plainLines(lines: Array<string | null | undefined>) {
   return lines.filter(Boolean).join("\n");
 }
 
-function htmlBody(title: string, lines: string[]) {
+function htmlBody(title: string, intro: string, rows: Array<[string, string | null | undefined]>, action?: { label: string; url: string }, notes: string[] = []) {
+  const detailRows = rows
+    .filter(([, value]) => value)
+    .map(
+      ([label, value]) =>
+        `<tr><th style="width:120px;padding:10px 0;color:#6b7280;font-size:13px;text-align:left;vertical-align:top">${escapeHtml(label)}</th><td style="padding:10px 0;color:#17201b;font-weight:600">${value}</td></tr>`
+    )
+    .join("");
+  const noteHtml = notes.length
+    ? `<div style="margin-top:18px;padding:12px 14px;border-radius:8px;background:#f6f7f2;color:#4b5563;font-size:13px;line-height:1.7">${notes.map(escapeHtml).join("<br>")}</div>`
+    : "";
+
   return [
-    `<h1 style="font-size:20px;color:#17201b">${escapeHtml(title)}</h1>`,
-    ...lines.map((line) => `<p style="line-height:1.7;color:#2f3a35">${line}</p>`),
-    `<p style="margin-top:24px;color:#6b7280;font-size:13px">Yoyaku</p>`
+    `<div style="font-family:Arial,'Hiragino Sans','Yu Gothic',sans-serif;line-height:1.7;color:#17201b;background:#fbfbf7;padding:24px">`,
+    `<div style="max-width:560px;margin:0 auto;border:1px solid #e5e7df;border-radius:14px;background:#ffffff;padding:24px">`,
+    `<p style="margin:0 0 8px;color:#5f7f52;font-size:13px;font-weight:700">Yoyaku</p>`,
+    `<h1 style="margin:0;font-size:22px;color:#17201b">${escapeHtml(title)}</h1>`,
+    `<p style="margin:16px 0 18px;color:#2f3a35">${escapeHtml(intro)}</p>`,
+    `<table role="presentation" style="width:100%;border-collapse:collapse;border-top:1px solid #eceee7;border-bottom:1px solid #eceee7">${detailRows}</table>`,
+    action ? `<p style="margin:22px 0 0">${button(action.url, action.label)}</p>` : "",
+    noteHtml,
+    `<p style="margin:24px 0 0;color:#6b7280;font-size:12px">このメールは Yoyaku から自動送信されています。</p>`,
+    `</div>`,
+    `</div>`
   ].join("");
 }
 
@@ -134,6 +158,14 @@ function bookingUrl(path: string) {
   return `${appUrl()}${path}`;
 }
 
+function studentBookingUrl(bookingId: string) {
+  return bookingUrl(`/student/bookings/${bookingId}`);
+}
+
+function teacherBookingUrl(bookingId: string) {
+  return bookingUrl(`/teacher/bookings/${bookingId}`);
+}
+
 export async function sendBookingConfirmedEmails(supabase: SupabaseClient, bookingId: string) {
   const context = await getBookingEmailContext(supabase, bookingId);
 
@@ -142,15 +174,22 @@ export async function sendBookingConfirmedEmails(supabase: SupabaseClient, booki
   }
 
   const studentText = plainLines([
-    `${context.teacherName}とのレッスン予約が確定しました。`,
-    `日時: ${context.lessonDateTime} - ${context.lessonEndTime}`,
+    "レッスン予約が確定しました。",
+    `講師: ${context.teacherName}`,
+    `生徒: ${context.studentName}`,
+    `レッスン日時: ${context.lessonDateTime} - ${context.lessonEndTime}`,
     context.meetingUrl ? `レッスンURL: ${context.meetingUrl}` : null,
-    `予約一覧: ${bookingUrl("/student/bookings")}`
+    `予約詳細: ${studentBookingUrl(context.booking.id)}`,
+    `キャンセルはレッスン開始${CANCEL_CUTOFF_HOURS}時間前まで可能です。`
   ]);
   const teacherText = plainLines([
-    `${context.studentName}さんの予約が入りました。`,
-    `日時: ${context.lessonDateTime} - ${context.lessonEndTime}`,
-    `予約一覧: ${bookingUrl("/teacher/bookings")}`
+    "新しい予約が入りました。",
+    `講師: ${context.teacherName}`,
+    `生徒: ${context.studentName}`,
+    `レッスン日時: ${context.lessonDateTime} - ${context.lessonEndTime}`,
+    context.meetingUrl ? `レッスンURL: ${context.meetingUrl}` : null,
+    `予約詳細: ${teacherBookingUrl(context.booking.id)}`,
+    `キャンセルはレッスン開始${CANCEL_CUTOFF_HOURS}時間前まで可能です。`
   ]);
 
   return sendMessages([
@@ -158,22 +197,35 @@ export async function sendBookingConfirmedEmails(supabase: SupabaseClient, booki
       to: context.studentEmail,
       subject: "【Yoyaku】予約が確定しました",
       text: studentText,
-      html: htmlBody("予約が確定しました", [
-        `${escapeHtml(context.teacherName)}とのレッスン予約が確定しました。`,
-        `<strong>日時:</strong> ${escapeHtml(context.lessonDateTime)} - ${escapeHtml(context.lessonEndTime)}`,
-        context.meetingUrl ? `<strong>レッスンURL:</strong> ${link(context.meetingUrl, context.meetingUrl)}` : "",
-        link(bookingUrl("/student/bookings"), "予約一覧を確認する")
-      ])
+      html: htmlBody(
+        "予約が確定しました",
+        "以下の内容でレッスン予約が確定しました。",
+        [
+          ["講師", escapeHtml(context.teacherName)],
+          ["生徒", escapeHtml(context.studentName)],
+          ["レッスン日時", `${escapeHtml(context.lessonDateTime)} - ${escapeHtml(context.lessonEndTime)}`],
+          ["レッスンURL", context.meetingUrl ? link(context.meetingUrl, context.meetingUrl) : null]
+        ],
+        { label: "予約詳細を開く", url: studentBookingUrl(context.booking.id) },
+        [`キャンセルはレッスン開始${CANCEL_CUTOFF_HOURS}時間前まで可能です。`]
+      )
     },
     {
       to: context.teacherEmail,
       subject: "【Yoyaku】新しい予約が入りました",
       text: teacherText,
-      html: htmlBody("新しい予約が入りました", [
-        `${escapeHtml(context.studentName)}さんの予約が入りました。`,
-        `<strong>日時:</strong> ${escapeHtml(context.lessonDateTime)} - ${escapeHtml(context.lessonEndTime)}`,
-        link(bookingUrl("/teacher/bookings"), "予約一覧を確認する")
-      ])
+      html: htmlBody(
+        "新しい予約が入りました",
+        "生徒から新しいレッスン予約が入りました。",
+        [
+          ["講師", escapeHtml(context.teacherName)],
+          ["生徒", escapeHtml(context.studentName)],
+          ["レッスン日時", `${escapeHtml(context.lessonDateTime)} - ${escapeHtml(context.lessonEndTime)}`],
+          ["レッスンURL", context.meetingUrl ? link(context.meetingUrl, context.meetingUrl) : null]
+        ],
+        { label: "予約詳細を開く", url: teacherBookingUrl(context.booking.id) },
+        [`キャンセルはレッスン開始${CANCEL_CUTOFF_HOURS}時間前まで可能です。`]
+      )
     }
   ]);
 }
@@ -188,11 +240,16 @@ export async function sendBookingCanceledEmails(supabase: SupabaseClient, bookin
   const studentText = plainLines([
     "レッスン予約をキャンセルしました。",
     `講師: ${context.teacherName}`,
-    `日時: ${context.lessonDateTime} - ${context.lessonEndTime}`
+    `生徒: ${context.studentName}`,
+    `レッスン日時: ${context.lessonDateTime} - ${context.lessonEndTime}`,
+    `予約詳細: ${studentBookingUrl(context.booking.id)}`
   ]);
   const teacherText = plainLines([
-    `${context.studentName}さんの予約がキャンセルされました。`,
-    `日時: ${context.lessonDateTime} - ${context.lessonEndTime}`
+    "レッスン予約がキャンセルされました。",
+    `講師: ${context.teacherName}`,
+    `生徒: ${context.studentName}`,
+    `レッスン日時: ${context.lessonDateTime} - ${context.lessonEndTime}`,
+    `予約詳細: ${teacherBookingUrl(context.booking.id)}`
   ]);
 
   return sendMessages([
@@ -200,20 +257,33 @@ export async function sendBookingCanceledEmails(supabase: SupabaseClient, bookin
       to: context.studentEmail,
       subject: "【Yoyaku】予約をキャンセルしました",
       text: studentText,
-      html: htmlBody("予約をキャンセルしました", [
-        "レッスン予約をキャンセルしました。",
-        `<strong>講師:</strong> ${escapeHtml(context.teacherName)}`,
-        `<strong>日時:</strong> ${escapeHtml(context.lessonDateTime)} - ${escapeHtml(context.lessonEndTime)}`
-      ])
+      html: htmlBody(
+        "予約をキャンセルしました",
+        "以下のレッスン予約をキャンセルしました。",
+        [
+          ["講師", escapeHtml(context.teacherName)],
+          ["生徒", escapeHtml(context.studentName)],
+          ["レッスン日時", `${escapeHtml(context.lessonDateTime)} - ${escapeHtml(context.lessonEndTime)}`]
+        ],
+        { label: "予約詳細を開く", url: studentBookingUrl(context.booking.id) },
+        ["この予約はキャンセル済みです。"]
+      )
     },
     {
       to: context.teacherEmail,
       subject: "【Yoyaku】予約がキャンセルされました",
       text: teacherText,
-      html: htmlBody("予約がキャンセルされました", [
-        `${escapeHtml(context.studentName)}さんの予約がキャンセルされました。`,
-        `<strong>日時:</strong> ${escapeHtml(context.lessonDateTime)} - ${escapeHtml(context.lessonEndTime)}`
-      ])
+      html: htmlBody(
+        "予約がキャンセルされました",
+        "以下のレッスン予約がキャンセルされました。",
+        [
+          ["講師", escapeHtml(context.teacherName)],
+          ["生徒", escapeHtml(context.studentName)],
+          ["レッスン日時", `${escapeHtml(context.lessonDateTime)} - ${escapeHtml(context.lessonEndTime)}`]
+        ],
+        { label: "予約詳細を開く", url: teacherBookingUrl(context.booking.id) },
+        ["この予約はキャンセル済みです。"]
+      )
     }
   ]);
 }
@@ -228,13 +298,18 @@ export async function sendBookingReminderEmails(supabase: SupabaseClient, bookin
   const studentText = plainLines([
     "レッスン開始まで約10分です。",
     `講師: ${context.teacherName}`,
-    `日時: ${context.lessonDateTime} - ${context.lessonEndTime}`,
-    context.meetingUrl ? `レッスンURL: ${context.meetingUrl}` : null
+    `生徒: ${context.studentName}`,
+    `レッスン日時: ${context.lessonDateTime} - ${context.lessonEndTime}`,
+    context.meetingUrl ? `レッスンURL: ${context.meetingUrl}` : null,
+    `予約詳細: ${studentBookingUrl(context.booking.id)}`
   ]);
   const teacherText = plainLines([
     "レッスン開始まで約10分です。",
+    `講師: ${context.teacherName}`,
     `生徒: ${context.studentName}`,
-    `日時: ${context.lessonDateTime} - ${context.lessonEndTime}`
+    `レッスン日時: ${context.lessonDateTime} - ${context.lessonEndTime}`,
+    context.meetingUrl ? `レッスンURL: ${context.meetingUrl}` : null,
+    `予約詳細: ${teacherBookingUrl(context.booking.id)}`
   ]);
 
   return sendMessages([
@@ -242,22 +317,33 @@ export async function sendBookingReminderEmails(supabase: SupabaseClient, bookin
       to: context.studentEmail,
       subject: "【Yoyaku】まもなくレッスンが始まります",
       text: studentText,
-      html: htmlBody("まもなくレッスンが始まります", [
-        "レッスン開始まで約10分です。",
-        `<strong>講師:</strong> ${escapeHtml(context.teacherName)}`,
-        `<strong>日時:</strong> ${escapeHtml(context.lessonDateTime)} - ${escapeHtml(context.lessonEndTime)}`,
-        context.meetingUrl ? `<strong>レッスンURL:</strong> ${link(context.meetingUrl, context.meetingUrl)}` : ""
-      ])
+      html: htmlBody(
+        "まもなくレッスンが始まります",
+        "レッスン開始まで約10分です。準備ができましたらレッスンURLを開いてください。",
+        [
+          ["講師", escapeHtml(context.teacherName)],
+          ["生徒", escapeHtml(context.studentName)],
+          ["レッスン日時", `${escapeHtml(context.lessonDateTime)} - ${escapeHtml(context.lessonEndTime)}`],
+          ["レッスンURL", context.meetingUrl ? link(context.meetingUrl, context.meetingUrl) : null]
+        ],
+        { label: context.meetingUrl ? "レッスンURLを開く" : "予約詳細を開く", url: context.meetingUrl ?? studentBookingUrl(context.booking.id) }
+      )
     },
     {
       to: context.teacherEmail,
       subject: "【Yoyaku】まもなくレッスンが始まります",
       text: teacherText,
-      html: htmlBody("まもなくレッスンが始まります", [
-        "レッスン開始まで約10分です。",
-        `<strong>生徒:</strong> ${escapeHtml(context.studentName)}`,
-        `<strong>日時:</strong> ${escapeHtml(context.lessonDateTime)} - ${escapeHtml(context.lessonEndTime)}`
-      ])
+      html: htmlBody(
+        "まもなくレッスンが始まります",
+        "レッスン開始まで約10分です。生徒情報とレッスン日時を確認してください。",
+        [
+          ["講師", escapeHtml(context.teacherName)],
+          ["生徒", escapeHtml(context.studentName)],
+          ["レッスン日時", `${escapeHtml(context.lessonDateTime)} - ${escapeHtml(context.lessonEndTime)}`],
+          ["レッスンURL", context.meetingUrl ? link(context.meetingUrl, context.meetingUrl) : null]
+        ],
+        { label: "予約詳細を開く", url: teacherBookingUrl(context.booking.id) }
+      )
     }
   ]);
 }

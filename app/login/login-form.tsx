@@ -30,6 +30,7 @@ declare global {
 export function LoginForm() {
   const [email, setEmail] = useState("");
   const [message, setMessage] = useState<string | null>(null);
+  const [messageTone, setMessageTone] = useState<"success" | "error" | "info">("info");
   const [turnstileToken, setTurnstileToken] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [cooldownSeconds, setCooldownSeconds] = useState(0);
@@ -61,10 +62,12 @@ export function LoginForm() {
       },
       "expired-callback": () => {
         setTurnstileToken("");
+        setMessageTone("error");
         setMessage("確認の有効期限が切れました。もう一度チェックしてください。");
       },
       "error-callback": () => {
         setTurnstileToken("");
+        setMessageTone("error");
         setMessage("確認に失敗しました。しばらくしてからもう一度お試しください。");
       }
     });
@@ -96,16 +99,19 @@ export function LoginForm() {
     }
 
     if (!isConfigured) {
+      setMessageTone("error");
       setMessage("Supabase の環境変数を設定してからログインできます。");
       return;
     }
 
     if (!isTurnstileConfigured) {
+      setMessageTone("error");
       setMessage("Turnstile の環境変数を設定してください。");
       return;
     }
 
     if (!turnstileToken) {
+      setMessageTone("error");
       setMessage("送信前に確認を完了してください。");
       return;
     }
@@ -119,11 +125,13 @@ export function LoginForm() {
     resetTurnstile();
 
     if (!result.ok) {
+      setMessageTone("error");
       setMessage(result.message);
       return;
     }
 
-    setMessage(`${result.message} メール内のリンクを開いてください。`);
+    setMessageTone("success");
+    setMessage(result.message);
     setCooldownSeconds(RESEND_COOLDOWN_SECONDS);
   }
 
@@ -175,7 +183,27 @@ export function LoginForm() {
                   ? "Turnstile 設定が必要です"
                   : "ログインリンクを送る"}
         </button>
-        {message ? <p className="rounded-md border-l-[3px] border-matcha/40 bg-white px-4 py-3 text-sm leading-relaxed text-sumi shadow-soft">{message}</p> : null}
+        {message ? (
+          <div
+            className={[
+              "rounded-md border-l-[3px] bg-white px-4 py-3 text-sm leading-relaxed shadow-soft",
+              messageTone === "success"
+                ? "border-matcha/50 text-sumi"
+                : messageTone === "error"
+                  ? "border-sakura/70 text-sumi"
+                  : "border-ink/20 text-sumi"
+            ].join(" ")}
+          >
+            <p>{message}</p>
+            {messageTone === "success" ? (
+              <ul className="mt-2 list-disc space-y-1 pl-5 text-xs text-sumi/65">
+                <li>メールが届かない場合は、迷惑メールフォルダを確認してください。</li>
+                <li>古いリンクや一度使用したリンクは使えません。必要な場合は再送信してください。</li>
+                <li>同じメールへの再送信は短時間に何度もできません。</li>
+              </ul>
+            ) : null}
+          </div>
+        ) : null}
       </form>
     </>
   );

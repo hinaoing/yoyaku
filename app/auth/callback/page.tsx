@@ -30,8 +30,6 @@ export default function AuthCallbackPage() {
   const [message, setMessage] = useState("ログインを確認しています...");
 
   useEffect(() => {
-    let isMounted = true;
-
     async function finishLogin() {
       const supabase = createClient();
       const hashParams = getHashParams();
@@ -43,9 +41,10 @@ export default function AuthCallbackPage() {
       const errorCode = searchParams.get("error_code") || hashParams.get("error_code");
 
       if (errorDescription) {
+        const normalizedError = errorDescription.toLowerCase();
         const message =
-          errorCode === "otp_expired"
-            ? "ログインリンクが期限切れです。新しいリンクを送信してください。"
+          errorCode === "otp_expired" || normalizedError.includes("expired")
+            ? "ログインリンクの期限が切れています。新しいリンクを送信してください。"
             : errorDescription;
         router.replace(toLoginError(message));
         return;
@@ -81,9 +80,7 @@ export default function AuthCallbackPage() {
       } = await supabase.auth.getSession();
 
       if (!session) {
-        if (isMounted) {
-          setMessage("ログインセッションを確認できませんでした。もう一度ログインリンクを送信してください。");
-        }
+        router.replace(toLoginError("ログインセッションを確認できませんでした。もう一度ログインリンクを送信してください。"));
         return;
       }
 
@@ -104,10 +101,6 @@ export default function AuthCallbackPage() {
     }
 
     finishLogin();
-
-    return () => {
-      isMounted = false;
-    };
   }, [router, searchParams]);
 
   return (
