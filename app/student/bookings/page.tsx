@@ -1,11 +1,8 @@
-import { Clock, ExternalLink } from "lucide-react";
-import Link from "next/link";
-import { CancelBookingButton } from "@/components/cancel-booking-button";
-import { cancelBooking } from "@/lib/actions";
+import { StudentBookingsCalendar } from "@/app/student/bookings/student-bookings-calendar";
 import { CANCEL_CUTOFF_HOURS } from "@/lib/constants";
 import { requireRole } from "@/lib/supabase/auth";
 import { hasSupabaseConfig } from "@/lib/supabase/config";
-import { canCancelBooking, formatDateTimeJa, formatTimeJa } from "@/lib/time";
+import { formatTokyoDateKey, getCurrentAndNextMonthRange, listDatesBetween } from "@/lib/time";
 import { EmptyState } from "@/components/empty-state";
 import { StatusBanner } from "@/components/status-banner";
 import { SupabaseSetup } from "@/components/supabase-setup";
@@ -21,11 +18,16 @@ export default async function StudentBookingsPage({ searchParams }: StudentBooki
   }
 
   const { supabase, user } = await requireRole("student");
+  const now = new Date();
+  const { currentMonthStart, nextMonthStart, nextMonthEnd } = getCurrentAndNextMonthRange(now);
+  const dates = listDatesBetween(currentMonthStart, nextMonthEnd);
   const { data: bookings } = await supabase
     .from("bookings")
     .select("id, starts_at, ends_at, status, teachers(display_name, meeting_url)")
     .eq("student_id", user.id)
     .eq("status", "confirmed")
+    .gte("starts_at", new Date(`${currentMonthStart}T00:00:00+09:00`).toISOString())
+    .lte("starts_at", new Date(`${nextMonthEnd}T23:59:59+09:00`).toISOString())
     .order("starts_at", { ascending: true });
 
   const activeBookings = bookings ?? [];
@@ -59,56 +61,9 @@ export default async function StudentBookingsPage({ searchParams }: StudentBooki
       />
 
       {activeBookings.length > 0 ? (
-        <section className="grid gap-4">
-          {activeBookings.map((booking) => {
-            const teacher = Array.isArray(booking.teachers) ? booking.teachers[0] : booking.teachers;
-            const lessonLabel = `${formatDateTimeJa(booking.starts_at)} - ${formatTimeJa(booking.ends_at)}`;
-            return (
-              <article className="group rounded-xl border border-ink/10 bg-white p-6 shadow-soft transition-all duration-200 hover:border-ink/15 hover:shadow-md" key={booking.id}>
-                <div className="flex flex-wrap items-start justify-between gap-4">
-                  <div className="flex items-start gap-4">
-                    <div className="hidden sm:grid size-11 shrink-0 place-items-center rounded-full bg-matcha/10 text-matcha">
-                      <Clock size={20} />
-                    </div>
-                    <div>
-                      <p className="text-xs font-medium uppercase tracking-wider text-sumi/50">レッスン日時</p>
-                      <h2 className="mt-1 text-xl font-semibold text-ink">
-                        {lessonLabel}
-                      </h2>
-                      <p className="mt-1.5 text-sumi/70">{teacher?.display_name ?? "講師"}</p>
-                    </div>
-                  </div>
-                  {teacher?.meeting_url ? (
-                    <a
-                      className="inline-flex items-center gap-2 rounded-lg border border-matcha/20 bg-matcha/[0.06] px-3 py-2 text-sm font-medium text-matcha transition-colors duration-150 hover:bg-matcha/10"
-                      href={teacher.meeting_url}
-                      rel="noreferrer"
-                      target="_blank"
-                    >
-                      <ExternalLink size={15} />
-                      レッスンURL
-                    </a>
-                  ) : null}
-                  <Link
-                    className="inline-flex items-center gap-2 rounded-lg border border-ink/15 bg-white px-3 py-2 text-sm font-medium text-sumi transition-colors duration-150 hover:bg-paper"
-                    href={`/student/bookings/${booking.id}`}
-                  >
-                    詳細
-                  </Link>
-                </div>
-                {canCancelBooking(booking.starts_at) ? (
-                  <form action={cancelBooking.bind(null, booking.id)} className="mt-5">
-                    <CancelBookingButton lessonLabel={lessonLabel} />
-                  </form>
-                ) : (
-                  <p className="mt-5 text-sm text-sumi/50">キャンセル期限を過ぎています。</p>
-                )}
-              </article>
-            );
-          })}
-        </section>
+        <StudentBookingsCalendar bookings={activeBookings} dates={dates} nextMonthStart={nextMonthStart} todayKey={formatTokyoDateKey(now)} />
       ) : (
-        <EmptyState title="予約はまだありません">講師一覧からレッスンを予約できます。</EmptyState>
+        <EmptyState title="今月・来月の予約はまだありません">講師一覧からレッスンを予約できます。</EmptyState>
       )}
     </div>
   );
