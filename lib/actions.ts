@@ -64,7 +64,8 @@ export async function createBooking(teacherId: string, startsAt: string) {
 
   revalidatePath(`/teachers/${teacherId}`);
   revalidatePath("/student/bookings");
-  redirect("/student/bookings?booked=1");
+  revalidatePath(`/student/bookings/${createdBooking.id}`);
+  redirect(`/student/bookings/${createdBooking.id}?booked=1`);
 }
 
 export async function cancelBooking(bookingId: string) {

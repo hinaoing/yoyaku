@@ -94,5 +94,6 @@ export async function POST(request: Request, { params }: BookingRouteContext) {
 
   revalidatePath(`/teachers/${teacherId}`);
   revalidatePath("/student/bookings");
-  return redirectTo(request, `/teachers/${teacherId}?booked=1`);
+  revalidatePath(`/student/bookings/${createdBooking.id}`);
+  return redirectTo(request, `/student/bookings/${createdBooking.id}?booked=1`);
 }

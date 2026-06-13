@@ -1,4 +1,5 @@
 import { Clock, ExternalLink } from "lucide-react";
+import Link from "next/link";
 import { CancelBookingButton } from "@/components/cancel-booking-button";
 import { cancelBooking } from "@/lib/actions";
 import { CANCEL_CUTOFF_HOURS } from "@/lib/constants";
@@ -88,6 +89,12 @@ export default async function StudentBookingsPage({ searchParams }: StudentBooki
                       レッスンURL
                     </a>
                   ) : null}
+                  <Link
+                    className="inline-flex items-center gap-2 rounded-lg border border-ink/15 bg-white px-3 py-2 text-sm font-medium text-sumi transition-colors duration-150 hover:bg-paper"
+                    href={`/student/bookings/${booking.id}`}
+                  >
+                    詳細
+                  </Link>
                 </div>
                 {canCancelBooking(booking.starts_at) ? (
                   <form action={cancelBooking.bind(null, booking.id)} className="mt-5">

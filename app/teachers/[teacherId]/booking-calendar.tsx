@@ -134,7 +134,7 @@ export function BookingCalendar({ dates, nextMonthStart, slots, teacherId, today
                     {formatTimeJa(slot.startsAt)} - {formatTimeJa(slot.endsAt)}
                   </p>
                   {viewerRole === "student" ? (
-                    <BookingButton startsAt={slot.startsAt} teacherId={teacherId} />
+                    <BookingButton endsAt={slot.endsAt} startsAt={slot.startsAt} teacherId={teacherId} />
                   ) : (
                     <p className="mt-3 rounded-md bg-sumi/[0.06] px-3 py-2 text-center text-sm text-sumi/65">
                       {viewerRole === "teacher" ? "学生アカウントで予約してください。" : "ログインすると予約できます。"}
@@ -152,12 +152,59 @@ export function BookingCalendar({ dates, nextMonthStart, slots, teacherId, today
   );
 }
 
-function BookingButton({ startsAt, teacherId }: { startsAt: string; teacherId: string }) {
+function BookingButton({ endsAt, startsAt, teacherId }: { endsAt: string; startsAt: string; teacherId: string }) {
+  const lessonLabel = `${formatDateJa(formatIsoDateKey(startsAt))} ${formatTimeJa(startsAt)} - ${formatTimeJa(endsAt)}`;
+
   return (
     <form action={`/teachers/${teacherId}/book`} method="post">
       <input name="startsAt" type="hidden" value={startsAt} />
-      <BookingSubmitButton />
+      <BookingConfirmButton lessonLabel={lessonLabel} />
     </form>
+  );
+}
+
+function BookingConfirmButton({ lessonLabel }: { lessonLabel: string }) {
+  const { pending } = useFormStatus();
+  const [confirming, setConfirming] = useState(false);
+
+  return (
+    <>
+      <button
+        className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-lg bg-matcha px-3 py-2.5 text-sm font-medium text-white transition-all duration-200 hover:bg-matcha/90 active:scale-[0.97] disabled:cursor-not-allowed disabled:bg-matcha/40 disabled:active:scale-100"
+        disabled={pending}
+        onClick={() => setConfirming(true)}
+        type="button"
+      >
+        {pending ? <Loader2 className="animate-spin" size={16} /> : <CalendarPlus size={16} />}
+        {pending ? "予約中..." : "予約する"}
+      </button>
+      {confirming ? (
+        <div className="fixed inset-0 z-50 grid place-items-center bg-ink/35 px-4">
+          <div className="w-full max-w-sm rounded-xl border border-ink/10 bg-white p-5 shadow-soft">
+            <p className="text-sm font-medium text-matcha">予約確認</p>
+            <h4 className="mt-2 text-lg font-semibold text-ink">この時間で予約しますか？</h4>
+            <p className="mt-3 rounded-lg bg-paper px-3 py-2 text-sm font-medium text-sumi">{lessonLabel}</p>
+            <div className="mt-5 flex justify-end gap-2">
+              <button
+                className="rounded-lg border border-ink/15 bg-white px-4 py-2 text-sm font-medium text-sumi transition-colors hover:bg-paper"
+                onClick={() => setConfirming(false)}
+                type="button"
+              >
+                戻る
+              </button>
+              <button
+                className="inline-flex items-center gap-2 rounded-lg bg-matcha px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-matcha/90 disabled:cursor-not-allowed disabled:bg-matcha/40"
+                disabled={pending}
+                type="submit"
+              >
+                {pending ? <Loader2 className="animate-spin" size={15} /> : <CalendarPlus size={15} />}
+                確定する
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+    </>
   );
 }
 
