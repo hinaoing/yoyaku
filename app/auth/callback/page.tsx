@@ -100,7 +100,7 @@ export default function AuthCallbackPage() {
         return;
       }
 
-      router.replace(next);
+      window.location.replace(next);
     }
 
     finishLogin();
