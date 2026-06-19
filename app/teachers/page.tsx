@@ -3,20 +3,79 @@ import { ArrowRight, User, Video } from "lucide-react";
 import { hasSupabaseConfig } from "@/lib/supabase/config";
 import { EmptyState } from "@/components/empty-state";
 import { SupabaseSetup } from "@/components/supabase-setup";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { requireUser } from "@/lib/supabase/auth";
 import { getTeacherAvatarUrlMap } from "@/lib/teacher-avatars";
+import { generateSlotsFromDateAvailability, getCurrentAndNextMonthRange } from "@/lib/time";
+import type { Booking, DateAvailability, Teacher } from "@/lib/types";
+
+type BookingAvailabilityRow = Pick<Booking, "starts_at" | "status"> & {
+  teacher_id: string;
+};
 
 export default async function TeachersPage() {
   if (!hasSupabaseConfig()) {
     return <SupabaseSetup />;
   }
 
-  const { supabase } = await requireUser();
+  const { supabase, user } = await requireUser();
   const { data: teachers } = await supabase
     .from("teachers")
     .select("user_id, display_name, bio, meeting_url")
     .order("display_name");
-  const avatarUrls = await getTeacherAvatarUrlMap((teachers ?? []).map((teacher) => teacher.user_id));
+  const teacherRows = (teachers ?? []) as Teacher[];
+  const teacherIds = teacherRows.map((teacher) => teacher.user_id);
+  const now = new Date();
+  const { currentMonthStart, nextMonthEnd } = getCurrentAndNextMonthRange(now);
+
+  const adminSupabase = createAdminClient();
+  const [{ data: availability }, { data: teacherBookings }, { data: studentBookings }] = teacherIds.length > 0
+    ? await Promise.all([
+      supabase
+        .from("date_availability")
+        .select("*")
+        .in("teacher_id", teacherIds)
+        .gte("availability_date", currentMonthStart)
+        .lte("availability_date", nextMonthEnd)
+        .order("availability_date")
+        .order("start_time"),
+      adminSupabase
+        .from("bookings")
+        .select("teacher_id, starts_at, status")
+        .in("teacher_id", teacherIds)
+        .eq("status", "confirmed")
+        .gte("starts_at", now.toISOString())
+        .returns<BookingAvailabilityRow[]>(),
+      adminSupabase
+        .from("bookings")
+        .select("starts_at, status")
+        .eq("student_id", user.id)
+        .eq("status", "confirmed")
+        .gte("starts_at", now.toISOString())
+        .returns<Pick<Booking, "starts_at" | "status">[]>()
+    ])
+    : [{ data: [] }, { data: [] }, { data: [] }];
+
+  const availabilityByTeacher = new Map<string, DateAvailability[]>();
+  for (const slot of (availability ?? []) as DateAvailability[]) {
+    availabilityByTeacher.set(slot.teacher_id, [...(availabilityByTeacher.get(slot.teacher_id) ?? []), slot]);
+  }
+
+  const bookingsByTeacher = new Map<string, Pick<Booking, "starts_at" | "status">[]>();
+  for (const booking of teacherBookings ?? []) {
+    bookingsByTeacher.set(booking.teacher_id, [...(bookingsByTeacher.get(booking.teacher_id) ?? []), booking]);
+  }
+
+  const availableTeachers = teacherRows.filter((teacher) => {
+    const slots = generateSlotsFromDateAvailability(
+      availabilityByTeacher.get(teacher.user_id) ?? [],
+      [...(bookingsByTeacher.get(teacher.user_id) ?? []), ...(studentBookings ?? [])],
+      now
+    );
+
+    return slots.length > 0;
+  });
+  const avatarUrls = await getTeacherAvatarUrlMap(availableTeachers.map((teacher) => teacher.user_id));
 
   return (
     <div className="space-y-8">
@@ -28,9 +87,9 @@ export default async function TeachersPage() {
         </p>
       </section>
 
-      {teachers && teachers.length > 0 ? (
+      {availableTeachers.length > 0 ? (
         <section className="grid gap-4 md:grid-cols-2">
-          {teachers.map((teacher) => {
+          {availableTeachers.map((teacher) => {
             const avatarUrl = avatarUrls.get(teacher.user_id) ?? null;
 
             return (
@@ -70,8 +129,8 @@ export default async function TeachersPage() {
           })}
         </section>
       ) : (
-        <EmptyState title="講師がまだ登録されていません">
-          Supabaseで講師ロールを付与し、講師設定ページからプロフィールを登録してください。
+        <EmptyState title="現在予約できる講師がいません">
+          空き時間が追加されるまでお待ちください。
         </EmptyState>
       )}
     </div>
