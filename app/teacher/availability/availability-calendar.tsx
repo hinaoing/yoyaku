@@ -5,9 +5,15 @@ import { useMemo, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { bookingTimeKey, slotContainsBooking, type AvailabilityBooking } from "@/lib/availability-bookings";
 import { availabilityIssueMessages, validateAvailabilitySlots } from "@/lib/availability-validation";
-import { APP_TIME_ZONE, BOOKING_START_INTERVAL_MINUTES, LESSON_DURATION_MINUTES } from "@/lib/constants";
-import { isJapanHoliday } from "@/lib/japan-holidays";
-import { buildMonthCalendarDates, formatDateJa, getWeekdayFromDateKey, parseTimeToMinutes, toTimeValue } from "@/lib/time";
+import { BOOKING_START_INTERVAL_MINUTES, LESSON_DURATION_MINUTES } from "@/lib/constants";
+import {
+  BlankDayCell,
+  MonthTab,
+  WeekdayHeader,
+  dayNumberClass,
+  getDayTone
+} from "@/components/calendar-shared";
+import { buildMonthCalendarDates, formatDateJa, formatMonthJa, parseTimeToMinutes, toTimeValue } from "@/lib/time";
 import type { DateAvailability } from "@/lib/types";
 
 type Row = {
@@ -29,7 +35,6 @@ type AvailabilityCalendarProps = {
   lockedBookings: AvailabilityBooking[];
 };
 
-const WEEKDAYS = ["日", "月", "火", "水", "木", "金", "土"];
 const TIME_HOURS = Array.from({ length: 24 }, (_, hour) => hour.toString().padStart(2, "0"));
 const TIME_MINUTES = ["00", "30"] as const;
 
@@ -132,12 +137,8 @@ export function AvailabilityCalendar({
   const nextMonthDates = dates.filter((date) => date >= nextMonthStart);
   const selectedRows = withProtectedRows(groupedRows.get(selectedDate) ?? [], lockedBookings, selectedDate);
 
-  const currentMonthLabel = currentMonthDates[0]
-    ? new Intl.DateTimeFormat("ja-JP", { year: "numeric", month: "long", timeZone: APP_TIME_ZONE }).format(new Date(`${currentMonthDates[0]}T00:00:00+09:00`))
-    : "今月";
-  const nextMonthLabel = nextMonthDates[0]
-    ? new Intl.DateTimeFormat("ja-JP", { year: "numeric", month: "long", timeZone: APP_TIME_ZONE }).format(new Date(`${nextMonthDates[0]}T00:00:00+09:00`))
-    : "来月";
+  const currentMonthLabel = formatMonthJa(currentMonthDates[0], "今月");
+  const nextMonthLabel = formatMonthJa(nextMonthDates[0], "来月");
 
   const activeDates = activeTab === "current" ? currentMonthDates : nextMonthDates;
 
@@ -159,50 +160,8 @@ export function AvailabilityCalendar({
 
       {/* Month tabs */}
       <div className="flex gap-1 rounded-xl border border-ink/10 bg-paper/70 p-1 shadow-inner">
-        <button
-          className={[
-            "flex flex-1 items-center justify-center gap-2 rounded-lg border px-4 py-2.5 text-sm font-semibold transition-all duration-200",
-            activeTab === "current"
-              ? "border-matcha bg-matcha text-white shadow-sm"
-              : "border-ink/10 bg-white/75 text-sumi/70 hover:border-matcha/30 hover:bg-matcha/[0.06] hover:text-ink"
-          ].join(" ")}
-          onClick={() => setActiveTab("current")}
-          type="button"
-        >
-          {currentMonthLabel}
-          {currentMonthSlotCount > 0 && (
-            <span
-              className={[
-                "rounded-full px-2 py-0.5 text-xs font-semibold",
-                activeTab === "current" ? "bg-white/20 text-white" : "bg-matcha/10 text-matcha"
-              ].join(" ")}
-            >
-              {currentMonthSlotCount}件
-            </span>
-          )}
-        </button>
-        <button
-          className={[
-            "flex flex-1 items-center justify-center gap-2 rounded-lg border px-4 py-2.5 text-sm font-semibold transition-all duration-200",
-            activeTab === "next"
-              ? "border-matcha bg-matcha text-white shadow-sm"
-              : "border-ink/10 bg-white/75 text-sumi/70 hover:border-matcha/30 hover:bg-matcha/[0.06] hover:text-ink"
-          ].join(" ")}
-          onClick={() => setActiveTab("next")}
-          type="button"
-        >
-          {nextMonthLabel}
-          {nextMonthSlotCount > 0 && (
-            <span
-              className={[
-                "rounded-full px-2 py-0.5 text-xs font-semibold",
-                activeTab === "next" ? "bg-white/20 text-white" : "bg-matcha/10 text-matcha"
-              ].join(" ")}
-            >
-              {nextMonthSlotCount}件
-            </span>
-          )}
-        </button>
+        <MonthTab active={activeTab === "current"} count={currentMonthSlotCount} label={currentMonthLabel} onClick={() => setActiveTab("current")} />
+        <MonthTab active={activeTab === "next"} count={nextMonthSlotCount} label={nextMonthLabel} onClick={() => setActiveTab("next")} />
       </div>
 
       {/* Calendar + Day editor sidebar */}
@@ -272,17 +231,11 @@ function MonthSection({
 
   return (
     <section className="min-w-0 space-y-0">
-      <div className="grid grid-cols-7 overflow-hidden rounded-t-lg border border-ink/10 text-center text-sm font-medium text-sumi/60">
-        {WEEKDAYS.map((weekday, index) => (
-          <div className={["border-b border-r border-ink/[0.06] py-2.5", weekdayHeaderClass(index)].join(" ")} key={weekday}>
-            {weekday}
-          </div>
-        ))}
-      </div>
+      <WeekdayHeader />
       <div className="grid grid-cols-7 overflow-hidden rounded-b-lg border border-t-0 border-ink/10">
         {cells.map((date, index) => {
           if (!date) {
-            return <div className="min-h-[5.5rem] border-b border-r border-ink/[0.06] bg-paper/40 sm:min-h-28" key={`blank-${index}`} />;
+            return <BlankDayCell key={`blank-${index}`} />;
           }
 
           const rows = groupedRows.get(date) ?? [];
@@ -313,17 +266,7 @@ function MonthSection({
                   onClick={() => onSelect(date)}
                   type="button"
                 >
-                  <span
-                    className={
-                      isPast
-                        ? "text-base font-medium text-sumi/40 sm:text-lg"
-                        : isToday
-                          ? "text-base font-semibold text-matcha sm:text-lg"
-                          : `text-base font-medium sm:text-lg ${dayTone.dateClass}`
-                    }
-                  >
-                    {date.slice(-2)}
-                  </span>
+                  <span className={dayNumberClass({ dateClass: dayTone.dateClass, isPast, isToday })}>{date.slice(-2)}</span>
                 </button>
                 {canAdd ? (
                   <button
@@ -583,45 +526,6 @@ function getNextStartTimeForDate(rows: Row[], date: string, todayKey: string, de
   const nextMinutes = Math.max(baseStartMinutes, Math.max(...sameDayStarts) + BOOKING_START_INTERVAL_MINUTES);
 
   return toTimeValue(Math.min(nextMinutes, latestStartMinutes));
-}
-
-function getDayTone(date: string) {
-  const weekday = getWeekdayFromDateKey(date);
-  const holiday = isJapanHoliday(date);
-
-  if (holiday || weekday === 0) {
-    return {
-      cellClass: "bg-sakura/5 hover:bg-sakura/10",
-      dateClass: "text-sakura",
-      isHoliday: holiday
-    };
-  }
-
-  if (weekday === 6) {
-    return {
-      cellClass: "bg-sky-50 hover:bg-sky-100",
-      dateClass: "text-sky-700",
-      isHoliday: false
-    };
-  }
-
-  return {
-    cellClass: "bg-white hover:bg-paper",
-    dateClass: "text-ink",
-    isHoliday: false
-  };
-}
-
-function weekdayHeaderClass(index: number) {
-  if (index === 0) {
-    return "bg-sakura/5 text-sakura";
-  }
-
-  if (index === 6) {
-    return "bg-sky-50 text-sky-700";
-  }
-
-  return "";
 }
 
 function isEditableSlot(row: Row, todayKey: string, currentTime: string) {

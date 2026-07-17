@@ -4,7 +4,7 @@ import { EmptyState } from "@/components/empty-state";
 import { StatusBanner } from "@/components/status-banner";
 import { SupabaseSetup } from "@/components/supabase-setup";
 import { hasSupabaseConfig } from "@/lib/supabase/config";
-import { requireUser } from "@/lib/supabase/auth";
+import { getViewerProfile, requireUser } from "@/lib/supabase/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getTeacherAvatarUrlMap } from "@/lib/teacher-avatars";
 import {
@@ -28,15 +28,15 @@ export default async function TeacherPage({ params, searchParams }: TeacherPageP
   }
 
   const { supabase, user } = await requireUser();
-  const { data: profile } = user
-    ? await supabase.from("profiles").select("role").eq("id", user.id).single()
-    : { data: null };
-  const viewerRole = (profile?.role as UserRole | undefined) ?? null;
-  const { data: teacher } = await supabase
-    .from("teachers")
-    .select("user_id, display_name, bio, meeting_url")
-    .eq("user_id", teacherId)
-    .single();
+  const [profile, { data: teacher }] = await Promise.all([
+    getViewerProfile(),
+    supabase
+      .from("teachers")
+      .select("user_id, display_name, bio, meeting_url")
+      .eq("user_id", teacherId)
+      .single()
+  ]);
+  const viewerRole: UserRole | null = profile?.role ?? null;
 
   if (!teacher) {
     return <EmptyState title="講師が見つかりません">講師一覧からもう一度選択してください。</EmptyState>;
@@ -45,7 +45,7 @@ export default async function TeacherPage({ params, searchParams }: TeacherPageP
   const now = new Date();
   const adminSupabase = createAdminClient();
   const { currentMonthStart, nextMonthStart, nextMonthEnd } = getCurrentAndNextMonthRange(now);
-  const [{ data: availability }, { data: teacherBookings }, { data: studentBookings }] = await Promise.all([
+  const [{ data: availability }, { data: teacherBookings }, { data: studentBookings }, avatarUrls] = await Promise.all([
     supabase
       .from("date_availability")
       .select("*")
@@ -65,11 +65,11 @@ export default async function TeacherPage({ params, searchParams }: TeacherPageP
       .select("starts_at, status")
       .eq("student_id", user.id)
       .eq("status", "confirmed")
-      .gte("starts_at", now.toISOString())
+      .gte("starts_at", now.toISOString()),
+    getTeacherAvatarUrlMap([teacher.user_id])
   ]);
   const dates = listDatesBetween(currentMonthStart, nextMonthEnd);
   const slots = generateSlotsFromDateAvailability(availability ?? [], [...(teacherBookings ?? []), ...(studentBookings ?? [])], now);
-  const avatarUrls = await getTeacherAvatarUrlMap([teacher.user_id]);
   const errorMessage =
     error === "student-required"
       ? "予約するには学生アカウントでログインしてください。"
@@ -90,7 +90,14 @@ export default async function TeacherPage({ params, searchParams }: TeacherPageP
       <section className="rounded-xl border border-ink/10 bg-white p-5 shadow-soft sm:p-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:gap-5">
           {avatarUrl ? (
-            <img alt="" className="size-14 shrink-0 rounded-full border border-ink/10 object-cover" src={avatarUrl} />
+            <img
+              alt=""
+              className="size-14 shrink-0 rounded-full border border-ink/10 object-cover"
+              decoding="async"
+              height={56}
+              src={avatarUrl}
+              width={56}
+            />
           ) : (
             <div className="grid size-14 shrink-0 place-items-center rounded-full bg-matcha/10 text-matcha">
               <User size={26} />

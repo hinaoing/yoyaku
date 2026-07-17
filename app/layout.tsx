@@ -1,13 +1,11 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import Link from "next/link";
+import { Suspense } from "react";
 import { CalendarCheck, GraduationCap } from "lucide-react";
 import "./globals.css";
-import { createClient } from "@/lib/supabase/server";
-import { hasSupabaseConfig } from "@/lib/supabase/config";
-import type { UserRole } from "@/lib/types";
-import { isAdminEmail } from "@/lib/admin";
-import { AccountMenu } from "@/components/account-menu";
+import { HeaderAuth, HeaderAuthFallback } from "@/components/header-auth";
+import { NavLink } from "@/components/nav-link";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 
@@ -16,40 +14,11 @@ export const metadata: Metadata = {
   description: "オンラインレッスン予約"
 };
 
-export default async function RootLayout({
+export default function RootLayout({
   children
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  let user: Awaited<ReturnType<Awaited<ReturnType<typeof createClient>>["auth"]["getUser"]>>["data"]["user"] = null;
-  let role: UserRole | null = null;
-  let fullName: string | null = null;
-  let avatarUrl: string | null = null;
-
-  if (hasSupabaseConfig()) {
-    try {
-      const supabase = await createClient();
-      const { data: { user: authUser } } = await supabase.auth.getUser();
-      user = authUser;
-
-      if (user) {
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("role, full_name, avatar_url")
-          .eq("id", user.id)
-          .single();
-        role = (profile?.role as UserRole) ?? null;
-        fullName = profile?.full_name ?? null;
-        avatarUrl = profile?.avatar_url ?? null;
-      }
-    } catch {
-      // Auth fetch failed — render as unauthenticated
-    }
-  }
-
-  const isTeacher = role === "teacher";
-  const isAdmin = isAdminEmail(user?.email);
-
   return (
     <html lang="ja" className={inter.variable}>
       <body className={inter.className}>
@@ -62,32 +31,16 @@ export default async function RootLayout({
               Yoyaku
             </Link>
             <nav className="flex items-center gap-1 text-sm text-sumi">
-              <Link className="rounded-md px-3 py-2 transition-colors duration-150 hover:bg-ink/5 hover:text-ink" href="/teachers">
+              <NavLink
+                activeClassName="bg-matcha/10 font-medium text-matcha hover:bg-matcha/15 hover:text-matcha"
+                className="rounded-md px-3 py-2 transition-colors duration-150 hover:bg-ink/5 hover:text-ink"
+                href="/teachers"
+              >
                 講師を探す
-              </Link>
-              {(!user || !isTeacher) && (
-                <Link className="rounded-md px-3 py-2 transition-colors duration-150 hover:bg-ink/5 hover:text-ink" href="/student/bookings">
-                  予約
-                </Link>
-              )}
-              {isTeacher && (
-                <Link className="rounded-md px-3 py-2 transition-colors duration-150 hover:bg-ink/5 hover:text-ink" href="/teacher/bookings">
-                  講師
-                </Link>
-              )}
-              {user ? (
-                <AccountMenu
-                  avatarUrl={avatarUrl}
-                  email={user.email}
-                  fullName={fullName}
-                  isAdmin={isAdmin}
-                  isTeacher={isTeacher}
-                />
-              ) : (
-                <Link className="rounded-md bg-matcha px-3 py-2 text-white transition-colors duration-150 hover:bg-matcha/90" href="/login">
-                  ログイン
-                </Link>
-              )}
+              </NavLink>
+              <Suspense fallback={<HeaderAuthFallback />}>
+                <HeaderAuth />
+              </Suspense>
             </nav>
           </div>
         </header>

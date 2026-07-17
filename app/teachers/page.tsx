@@ -29,6 +29,9 @@ export default async function TeachersPage() {
   const { currentMonthStart, nextMonthEnd } = getCurrentAndNextMonthRange(now);
 
   const adminSupabase = createAdminClient();
+  // Fetch avatars in parallel with the availability/bookings queries instead of
+  // waiting for them to finish first.
+  const avatarUrlsPromise = getTeacherAvatarUrlMap(teacherIds);
   const [{ data: availability }, { data: teacherBookings }, { data: studentBookings }] = teacherIds.length > 0
     ? await Promise.all([
       supabase
@@ -58,12 +61,22 @@ export default async function TeachersPage() {
 
   const availabilityByTeacher = new Map<string, DateAvailability[]>();
   for (const slot of (availability ?? []) as DateAvailability[]) {
-    availabilityByTeacher.set(slot.teacher_id, [...(availabilityByTeacher.get(slot.teacher_id) ?? []), slot]);
+    const list = availabilityByTeacher.get(slot.teacher_id);
+    if (list) {
+      list.push(slot);
+    } else {
+      availabilityByTeacher.set(slot.teacher_id, [slot]);
+    }
   }
 
   const bookingsByTeacher = new Map<string, Pick<Booking, "starts_at" | "status">[]>();
   for (const booking of teacherBookings ?? []) {
-    bookingsByTeacher.set(booking.teacher_id, [...(bookingsByTeacher.get(booking.teacher_id) ?? []), booking]);
+    const list = bookingsByTeacher.get(booking.teacher_id);
+    if (list) {
+      list.push(booking);
+    } else {
+      bookingsByTeacher.set(booking.teacher_id, [booking]);
+    }
   }
 
   const availableTeachers = teacherRows.filter((teacher) => {
@@ -75,7 +88,7 @@ export default async function TeachersPage() {
 
     return slots.length > 0;
   });
-  const avatarUrls = await getTeacherAvatarUrlMap(availableTeachers.map((teacher) => teacher.user_id));
+  const avatarUrls = await avatarUrlsPromise;
 
   return (
     <div className="space-y-8">
@@ -101,7 +114,15 @@ export default async function TeachersPage() {
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex items-start gap-4">
                     {avatarUrl ? (
-                      <img alt="" className="size-11 shrink-0 rounded-full border border-ink/10 object-cover" src={avatarUrl} />
+                      <img
+                        alt=""
+                        className="size-11 shrink-0 rounded-full border border-ink/10 object-cover"
+                        decoding="async"
+                        height={44}
+                        loading="lazy"
+                        src={avatarUrl}
+                        width={44}
+                      />
                     ) : (
                       <div className="grid size-11 shrink-0 place-items-center rounded-full bg-matcha/10 text-matcha">
                         <User size={20} />

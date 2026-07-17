@@ -1,11 +1,24 @@
 "use client";
 
-import { CalendarPlus, ChevronRight, Loader2 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { CalendarPlus, Loader2 } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 import { useFormStatus } from "react-dom";
-import { APP_TIME_ZONE } from "@/lib/constants";
-import { isJapanHoliday } from "@/lib/japan-holidays";
-import { buildMonthCalendarDates, formatDateJa, formatTimeJa, getWeekdayFromDateKey } from "@/lib/time";
+import {
+  BlankDayCell,
+  CountBadge,
+  MonthTab,
+  WeekdayHeader,
+  dayCellClass,
+  dayNumberClass,
+  getDayTone
+} from "@/components/calendar-shared";
+import {
+  buildMonthCalendarDates,
+  formatDateJa,
+  formatMonthJa,
+  formatTimeJa,
+  isoToTokyoDateKey
+} from "@/lib/time";
 import type { Slot, UserRole } from "@/lib/types";
 
 type BookingCalendarProps = {
@@ -17,41 +30,50 @@ type BookingCalendarProps = {
   viewerRole: UserRole | null;
 };
 
-const WEEKDAYS = ["日", "月", "火", "水", "木", "金", "土"];
-
 export function BookingCalendar({ dates, nextMonthStart, slots, teacherId, todayKey, viewerRole }: BookingCalendarProps) {
   const groupedSlots = useMemo(() => {
     const grouped = new Map<string, Slot[]>();
 
     for (const slot of slots) {
-      const dateKey = formatIsoDateKey(slot.startsAt);
-      grouped.set(dateKey, [...(grouped.get(dateKey) ?? []), slot]);
+      const dateKey = isoToTokyoDateKey(slot.startsAt);
+      const list = grouped.get(dateKey);
+      if (list) {
+        list.push(slot);
+      } else {
+        grouped.set(dateKey, [slot]);
+      }
     }
 
     return grouped;
   }, [slots]);
-  const [selectedDate, setSelectedDate] = useState(
-    () => dates.find((date) => (groupedSlots.get(date)?.length ?? 0) > 0) ?? dates.find((date) => date >= todayKey) ?? dates[0] ?? ""
-  );
-  const [activeTab, setActiveTab] = useState<"current" | "next">("current");
-
   const currentMonthDates = dates.filter((date) => date < nextMonthStart);
   const nextMonthDates = dates.filter((date) => date >= nextMonthStart);
+  const initialSelectedDate =
+    dates.find((date) => (groupedSlots.get(date)?.length ?? 0) > 0) ?? dates.find((date) => date >= todayKey) ?? dates[0] ?? "";
+  const [selectedDate, setSelectedDate] = useState(initialSelectedDate);
+  const [activeTab, setActiveTab] = useState<"current" | "next">(initialSelectedDate >= nextMonthStart ? "next" : "current");
+
   const selectedSlots = groupedSlots.get(selectedDate) ?? [];
 
-  const currentMonthLabel = currentMonthDates[0]
-    ? new Intl.DateTimeFormat("ja-JP", { year: "numeric", month: "long", timeZone: APP_TIME_ZONE }).format(new Date(`${currentMonthDates[0]}T00:00:00+09:00`))
-    : "今月";
-  const nextMonthLabel = nextMonthDates[0]
-    ? new Intl.DateTimeFormat("ja-JP", { year: "numeric", month: "long", timeZone: APP_TIME_ZONE }).format(new Date(`${nextMonthDates[0]}T00:00:00+09:00`))
-    : "来月";
+  const currentMonthLabel = formatMonthJa(currentMonthDates[0], "今月");
+  const nextMonthLabel = formatMonthJa(nextMonthDates[0], "来月");
 
   const activeDates = activeTab === "current" ? currentMonthDates : nextMonthDates;
   const activeLabel = activeTab === "current" ? currentMonthLabel : nextMonthLabel;
 
-  // Count available slots per month for tab badges
   const currentMonthSlotCount = currentMonthDates.reduce((sum, d) => sum + (groupedSlots.get(d)?.length ?? 0), 0);
   const nextMonthSlotCount = nextMonthDates.reduce((sum, d) => sum + (groupedSlots.get(d)?.length ?? 0), 0);
+
+  const selectMonth = (tab: "current" | "next") => {
+    const monthDates = tab === "current" ? currentMonthDates : nextMonthDates;
+    setActiveTab(tab);
+    setSelectedDate(
+      monthDates.find((date) => (groupedSlots.get(date)?.length ?? 0) > 0) ??
+        monthDates.find((date) => date >= todayKey) ??
+        monthDates[0] ??
+        ""
+    );
+  };
 
   if (slots.length === 0) {
     return (
@@ -66,50 +88,8 @@ export function BookingCalendar({ dates, nextMonthStart, slots, teacherId, today
     <div className="space-y-5">
       {/* Month tabs */}
       <div className="flex gap-1 rounded-xl border border-ink/10 bg-paper/70 p-1 shadow-inner">
-        <button
-          className={[
-            "flex flex-1 items-center justify-center gap-2 rounded-lg border px-4 py-2.5 text-sm font-semibold transition-all duration-200",
-            activeTab === "current"
-              ? "border-matcha bg-matcha text-white shadow-sm"
-              : "border-ink/10 bg-white/75 text-sumi/70 hover:border-matcha/30 hover:bg-matcha/[0.06] hover:text-ink"
-          ].join(" ")}
-          onClick={() => setActiveTab("current")}
-          type="button"
-        >
-          {currentMonthLabel}
-          {currentMonthSlotCount > 0 && (
-            <span
-              className={[
-                "rounded-full px-2 py-0.5 text-xs font-semibold",
-                activeTab === "current" ? "bg-white/20 text-white" : "bg-matcha/10 text-matcha"
-              ].join(" ")}
-            >
-              {currentMonthSlotCount}件
-            </span>
-          )}
-        </button>
-        <button
-          className={[
-            "flex flex-1 items-center justify-center gap-2 rounded-lg border px-4 py-2.5 text-sm font-semibold transition-all duration-200",
-            activeTab === "next"
-              ? "border-matcha bg-matcha text-white shadow-sm"
-              : "border-ink/10 bg-white/75 text-sumi/70 hover:border-matcha/30 hover:bg-matcha/[0.06] hover:text-ink"
-          ].join(" ")}
-          onClick={() => setActiveTab("next")}
-          type="button"
-        >
-          {nextMonthLabel}
-          {nextMonthSlotCount > 0 && (
-            <span
-              className={[
-                "rounded-full px-2 py-0.5 text-xs font-semibold",
-                activeTab === "next" ? "bg-white/20 text-white" : "bg-matcha/10 text-matcha"
-              ].join(" ")}
-            >
-              {nextMonthSlotCount}件
-            </span>
-          )}
-        </button>
+        <MonthTab active={activeTab === "current"} count={currentMonthSlotCount} label={currentMonthLabel} onClick={() => selectMonth("current")} />
+        <MonthTab active={activeTab === "next"} count={nextMonthSlotCount} label={nextMonthLabel} onClick={() => selectMonth("next")} />
       </div>
 
       {/* Calendar + slot sidebar */}
@@ -153,7 +133,7 @@ export function BookingCalendar({ dates, nextMonthStart, slots, teacherId, today
 }
 
 function BookingButton({ endsAt, startsAt, teacherId }: { endsAt: string; startsAt: string; teacherId: string }) {
-  const lessonLabel = `${formatDateJa(formatIsoDateKey(startsAt))} ${formatTimeJa(startsAt)} - ${formatTimeJa(endsAt)}`;
+  const lessonLabel = `${formatDateJa(isoToTokyoDateKey(startsAt))} ${formatTimeJa(startsAt)} - ${formatTimeJa(endsAt)}`;
 
   return (
     <form action={`/teachers/${teacherId}/book`} method="post">
@@ -167,6 +147,24 @@ function BookingConfirmButton({ lessonLabel }: { lessonLabel: string }) {
   const { pending } = useFormStatus();
   const [confirming, setConfirming] = useState(false);
 
+  useEffect(() => {
+    if (!confirming) {
+      return;
+    }
+
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setConfirming(false);
+      }
+    }
+
+    document.addEventListener("keydown", onKeyDown);
+
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [confirming]);
+
   return (
     <>
       <button
@@ -179,8 +177,20 @@ function BookingConfirmButton({ lessonLabel }: { lessonLabel: string }) {
         {pending ? "予約中..." : "予約する"}
       </button>
       {confirming ? (
-        <div className="fixed inset-0 z-50 grid place-items-center bg-ink/35 px-4">
-          <div className="w-full max-w-sm rounded-xl border border-ink/10 bg-white p-5 shadow-soft">
+        <div
+          className="fixed inset-0 z-50 grid animate-fadeIn place-items-center bg-ink/35 px-4"
+          onClick={() => {
+            if (!pending) {
+              setConfirming(false);
+            }
+          }}
+        >
+          <div
+            aria-modal="true"
+            className="w-full max-w-sm animate-slideUp rounded-xl border border-ink/10 bg-white p-5 shadow-soft"
+            onClick={(event) => event.stopPropagation()}
+            role="dialog"
+          >
             <p className="text-sm font-medium text-matcha">予約確認</p>
             <h4 className="mt-2 text-lg font-semibold text-ink">この時間で予約しますか？</h4>
             <p className="mt-3 rounded-lg bg-paper px-3 py-2 text-sm font-medium text-sumi">{lessonLabel}</p>
@@ -208,20 +218,6 @@ function BookingConfirmButton({ lessonLabel }: { lessonLabel: string }) {
   );
 }
 
-function BookingSubmitButton() {
-  const { pending } = useFormStatus();
-
-  return (
-    <button
-      className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-lg bg-matcha px-3 py-2.5 text-sm font-medium text-white transition-all duration-200 hover:bg-matcha/90 active:scale-[0.97] disabled:cursor-not-allowed disabled:bg-matcha/40 disabled:active:scale-100"
-      disabled={pending}
-    >
-      {pending ? <Loader2 className="animate-spin" size={16} /> : <CalendarPlus size={16} />}
-      {pending ? "予約中..." : "予約する"}
-    </button>
-  );
-}
-
 type MonthSectionProps = {
   dates: string[];
   groupedSlots: Map<string, Slot[]>;
@@ -231,22 +227,16 @@ type MonthSectionProps = {
   todayKey: string;
 };
 
-function MonthSection({ dates, groupedSlots, onSelect, selectedDate, title, todayKey }: MonthSectionProps) {
+function MonthSection({ dates, groupedSlots, onSelect, selectedDate, todayKey }: MonthSectionProps) {
   const cells = buildMonthCalendarDates(dates);
 
   return (
     <section className="space-y-3">
-      <div className="grid grid-cols-7 overflow-hidden rounded-t-lg border border-ink/10 text-center text-sm font-medium text-sumi/60">
-        {WEEKDAYS.map((weekday, index) => (
-          <div className={["border-b border-r border-ink/[0.06] py-2.5", weekdayHeaderClass(index)].join(" ")} key={weekday}>
-            {weekday}
-          </div>
-        ))}
-      </div>
+      <WeekdayHeader />
       <div className="grid grid-cols-7 overflow-hidden rounded-b-lg border border-t-0 border-ink/10" style={{ marginTop: 0 }}>
         {cells.map((date, index) => {
           if (!date) {
-            return <div className="min-h-[5.5rem] border-b border-r border-ink/[0.06] bg-paper/40 sm:min-h-28" key={`blank-${index}`} />;
+            return <BlankDayCell key={`blank-${index}`} />;
           }
 
           const slotCount = groupedSlots.get(date)?.length ?? 0;
@@ -257,35 +247,17 @@ function MonthSection({ dates, groupedSlots, onSelect, selectedDate, title, toda
 
           return (
             <button
-              className={[
-                "min-h-[5.5rem] border-b border-r border-ink/[0.06] p-2 text-left transition-all duration-150 sm:min-h-28 sm:p-3",
-                isPast ? "bg-sumi/[0.06] text-sumi/40" : dayTone.cellClass,
-                isSelected ? "ring-2 ring-inset ring-matcha" : ""
-              ].join(" ")}
+              aria-label={`${formatDateJa(date)} 空き${slotCount}枠`}
+              aria-pressed={isSelected}
+              className={dayCellClass({ cellClass: dayTone.cellClass, isPast, isSelected })}
               disabled={isPast}
               key={date}
               onClick={() => onSelect(date)}
               type="button"
             >
-              <span
-                className={
-                  isPast
-                    ? "text-base font-medium text-sumi/40 sm:text-lg"
-                    : isToday
-                      ? "text-base font-semibold text-matcha sm:text-lg"
-                      : `text-base font-medium sm:text-lg ${dayTone.dateClass}`
-                }
-              >
-                {date.slice(-2)}
-              </span>
+              <span className={dayNumberClass({ dateClass: dayTone.dateClass, isPast, isToday })}>{date.slice(-2)}</span>
               <span className="mt-2 block text-sumi/65 sm:mt-4">
-                {slotCount > 0 ? (
-                  <span className="inline-flex rounded-full bg-matcha/10 px-1.5 py-0.5 text-[10px] font-medium text-matcha sm:px-2 sm:py-1 sm:text-xs">
-                    {slotCount}枠
-                  </span>
-                ) : (
-                  <span className="text-[10px] sm:text-xs">—</span>
-                )}
+                <CountBadge count={slotCount} unit="枠" />
               </span>
             </button>
           );
@@ -293,44 +265,4 @@ function MonthSection({ dates, groupedSlots, onSelect, selectedDate, title, toda
       </div>
     </section>
   );
-}
-
-function getDayTone(date: string) {
-  const weekday = getWeekdayFromDateKey(date);
-  const holiday = isJapanHoliday(date);
-
-  if (holiday || weekday === 0) {
-    return { cellClass: "bg-sakura/5 hover:bg-sakura/10", dateClass: "text-sakura" };
-  }
-
-  if (weekday === 6) {
-    return { cellClass: "bg-sky-50 hover:bg-sky-100", dateClass: "text-sky-700" };
-  }
-
-  return { cellClass: "bg-white hover:bg-paper", dateClass: "text-ink" };
-}
-
-function weekdayHeaderClass(index: number) {
-  if (index === 0) {
-    return "bg-sakura/5 text-sakura";
-  }
-
-  if (index === 6) {
-    return "bg-sky-50 text-sky-700";
-  }
-
-  return "";
-}
-
-function formatIsoDateKey(iso: string) {
-  const parts = new Intl.DateTimeFormat("ja-JP", {
-    timeZone: "Asia/Tokyo",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit"
-  }).formatToParts(new Date(iso));
-  const year = parts.find((part) => part.type === "year")?.value;
-  const month = parts.find((part) => part.type === "month")?.value;
-  const day = parts.find((part) => part.type === "day")?.value;
-  return `${year}-${month}-${day}`;
 }

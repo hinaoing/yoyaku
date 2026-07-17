@@ -23,6 +23,34 @@ const dateTimeFormatter = new Intl.DateTimeFormat("ja-JP", {
   minute: "2-digit"
 });
 
+// Intl.DateTimeFormat construction is expensive; keep singletons at module
+// scope instead of rebuilding one per call.
+const timeKeyFormatter = new Intl.DateTimeFormat("en-US", {
+  timeZone: APP_TIME_ZONE,
+  hour: "2-digit",
+  minute: "2-digit",
+  hour12: false
+});
+
+const dateJaFormatter = new Intl.DateTimeFormat("ja-JP", {
+  timeZone: APP_TIME_ZONE,
+  month: "short",
+  day: "numeric",
+  weekday: "short"
+});
+
+const timeJaFormatter = new Intl.DateTimeFormat("ja-JP", {
+  timeZone: APP_TIME_ZONE,
+  hour: "2-digit",
+  minute: "2-digit"
+});
+
+const monthJaFormatter = new Intl.DateTimeFormat("ja-JP", {
+  timeZone: APP_TIME_ZONE,
+  year: "numeric",
+  month: "long"
+});
+
 export function parseTimeToMinutes(value: string) {
   const [hour = "0", minute = "0"] = value.split(":");
   return Number(hour) * 60 + Number(minute);
@@ -45,15 +73,14 @@ export function formatTokyoDateKey(date: Date) {
 }
 
 export function formatTokyoTimeKey(date: Date) {
-  const parts = new Intl.DateTimeFormat("en-US", {
-    timeZone: APP_TIME_ZONE,
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false
-  }).formatToParts(date);
+  const parts = timeKeyFormatter.formatToParts(date);
   const hour = parts.find((part) => part.type === "hour")?.value ?? "00";
   const minute = parts.find((part) => part.type === "minute")?.value ?? "00";
   return `${hour}:${minute}`;
+}
+
+export function isoToTokyoDateKey(iso: string) {
+  return formatTokyoDateKey(new Date(iso));
 }
 
 export function tokyoDateTimeToUtcIso(dateKey: string, timeValue: string) {
@@ -69,20 +96,19 @@ export function formatDateTimeJa(iso: string) {
 }
 
 export function formatDateJa(dateKey: string) {
-  return new Intl.DateTimeFormat("ja-JP", {
-    timeZone: APP_TIME_ZONE,
-    month: "short",
-    day: "numeric",
-    weekday: "short"
-  }).format(new Date(`${dateKey}T00:00:00+09:00`));
+  return dateJaFormatter.format(new Date(`${dateKey}T00:00:00+09:00`));
 }
 
 export function formatTimeJa(iso: string) {
-  return new Intl.DateTimeFormat("ja-JP", {
-    timeZone: APP_TIME_ZONE,
-    hour: "2-digit",
-    minute: "2-digit"
-  }).format(new Date(iso));
+  return timeJaFormatter.format(new Date(iso));
+}
+
+export function formatMonthJa(dateKey: string | undefined, fallback: string) {
+  if (!dateKey) {
+    return fallback;
+  }
+
+  return monthJaFormatter.format(new Date(`${dateKey}T00:00:00+09:00`));
 }
 
 export function formatWeekdayJa(weekday: number) {

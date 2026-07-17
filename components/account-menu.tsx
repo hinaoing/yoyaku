@@ -2,7 +2,7 @@
 
 import { ChevronDown, GraduationCap, LogOut, Settings, ShieldCheck, User } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 type AccountMenuProps = {
   avatarUrl?: string | null;
@@ -18,18 +18,46 @@ function initials(label: string) {
 
 export function AccountMenu({ avatarUrl, email, fullName, isAdmin, isTeacher }: AccountMenuProps) {
   const [open, setOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement | null>(null);
   const label = fullName || email || "User";
 
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    function onPointerDown(event: PointerEvent) {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setOpen(false);
+      }
+    }
+
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setOpen(false);
+      }
+    }
+
+    document.addEventListener("pointerdown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [open]);
+
   return (
-    <div className="relative">
+    <div className="relative" ref={containerRef}>
       <button
         aria-expanded={open}
+        aria-haspopup="menu"
         className="inline-flex max-w-56 items-center gap-2 rounded-md bg-matcha/10 px-2.5 py-2 text-matcha transition-colors duration-150 hover:bg-matcha/15"
         onClick={() => setOpen((current) => !current)}
         type="button"
       >
         {avatarUrl ? (
-          <img alt="" className="size-6 rounded-full object-cover" src={avatarUrl} />
+          <img alt="" className="size-6 rounded-full object-cover" height={24} src={avatarUrl} width={24} />
         ) : (
           <span className="grid size-6 place-items-center rounded-full bg-matcha text-xs font-semibold text-white">
             {initials(label)}
@@ -40,7 +68,7 @@ export function AccountMenu({ avatarUrl, email, fullName, isAdmin, isTeacher }: 
       </button>
 
       {open ? (
-        <div className="absolute right-0 top-full z-50 mt-2 w-56 overflow-hidden rounded-xl border border-ink/10 bg-white shadow-lg">
+        <div className="absolute right-0 top-full z-50 mt-2 w-56 animate-slideDown overflow-hidden rounded-xl border border-ink/10 bg-white shadow-lg">
           <div className="border-b border-ink/10 px-4 py-3">
             <p className="truncate font-medium text-ink">{label}</p>
             {email ? <p className="mt-0.5 truncate text-xs text-sumi/55">{email}</p> : null}
