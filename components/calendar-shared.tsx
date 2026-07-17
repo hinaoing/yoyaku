@@ -79,15 +79,17 @@ export function CountBadge({ count, unit }: { count: number; unit: string }) {
   );
 }
 
+export function MonthTabBar({ children }: { children: React.ReactNode }) {
+  return <div className="flex gap-1 rounded-xl bg-ink/[0.06] p-1">{children}</div>;
+}
+
 export function MonthTab({ active, count, label, onClick }: { active: boolean; count: number; label: string; onClick: () => void }) {
   return (
     <button
       aria-pressed={active}
       className={[
-        "flex flex-1 items-center justify-center gap-2 rounded-lg border px-4 py-2.5 text-sm font-semibold transition-all duration-200",
-        active
-          ? "border-matcha bg-matcha text-white shadow-sm"
-          : "border-ink/10 bg-white/75 text-sumi/70 hover:border-matcha/30 hover:bg-matcha/[0.06] hover:text-ink"
+        "flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition-all duration-200",
+        active ? "bg-matcha text-white shadow-sm" : "text-sumi/65 hover:bg-white/70 hover:text-ink"
       ].join(" ")}
       onClick={onClick}
       type="button"

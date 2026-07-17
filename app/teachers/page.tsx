@@ -101,7 +101,7 @@ export default async function TeachersPage() {
       </section>
 
       {availableTeachers.length > 0 ? (
-        <section className="grid gap-4 md:grid-cols-2">
+        <section className="grid max-w-3xl gap-4">
           {availableTeachers.map((teacher) => {
             const avatarUrl = avatarUrls.get(teacher.user_id) ?? null;
 

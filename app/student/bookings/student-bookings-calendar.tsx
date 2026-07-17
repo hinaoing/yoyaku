@@ -7,6 +7,7 @@ import {
   BlankDayCell,
   CountBadge,
   MonthTab,
+  MonthTabBar,
   WeekdayHeader,
   dayCellClass,
   dayNumberClass,
@@ -78,10 +79,10 @@ export function StudentBookingsCalendar({ bookings, dates, nextMonthStart, today
 
   return (
     <section className="space-y-5 rounded-xl border border-ink/10 bg-white p-5 shadow-soft">
-      <div className="flex gap-1 rounded-xl border border-ink/10 bg-paper/70 p-1 shadow-inner">
+      <MonthTabBar>
         <MonthTab active={activeTab === "current"} count={currentMonthCount} label={formatMonthJa(currentMonthDates[0], "今月")} onClick={() => selectMonth("current")} />
         <MonthTab active={activeTab === "next"} count={nextMonthCount} label={formatMonthJa(nextMonthDates[0], "来月")} onClick={() => selectMonth("next")} />
-      </div>
+      </MonthTabBar>
 
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_340px]">
         <MonthGrid dates={activeDates} groupedBookings={groupedBookings} onSelect={setSelectedDate} selectedDate={selectedDate} todayKey={todayKey} />

@@ -9,6 +9,7 @@ import { BOOKING_START_INTERVAL_MINUTES, LESSON_DURATION_MINUTES } from "@/lib/c
 import {
   BlankDayCell,
   MonthTab,
+  MonthTabBar,
   WeekdayHeader,
   dayNumberClass,
   getDayTone
@@ -159,10 +160,10 @@ export function AvailabilityCalendar({
       ))}
 
       {/* Month tabs */}
-      <div className="flex gap-1 rounded-xl border border-ink/10 bg-paper/70 p-1 shadow-inner">
+      <MonthTabBar>
         <MonthTab active={activeTab === "current"} count={currentMonthSlotCount} label={currentMonthLabel} onClick={() => setActiveTab("current")} />
         <MonthTab active={activeTab === "next"} count={nextMonthSlotCount} label={nextMonthLabel} onClick={() => setActiveTab("next")} />
-      </div>
+      </MonthTabBar>
 
       {/* Calendar + Day editor sidebar */}
       <div className="grid min-w-0 gap-5 lg:grid-cols-[minmax(0,1fr)_360px]">

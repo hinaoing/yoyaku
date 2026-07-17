@@ -8,8 +8,7 @@ export default function Loading() {
         <div className="h-9 w-80 max-w-full rounded bg-sumi/10" />
         <div className="h-4 w-96 max-w-full rounded bg-sumi/10" />
       </section>
-      <section className="grid gap-4 md:grid-cols-2">
-        <TeacherCardLoading />
+      <section className="grid max-w-3xl gap-4">
         <TeacherCardLoading />
         <TeacherCardLoading />
         <TeacherCardLoading />

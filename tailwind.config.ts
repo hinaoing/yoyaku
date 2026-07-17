@@ -7,8 +7,8 @@ const config: Config = {
       colors: {
         ink: "#17201b",
         paper: "#fbfaf7",
-        matcha: "#5f7f52",
-        bamboo: "#7a9e6b",
+        matcha: "#2e7d64",
+        bamboo: "#5ba189",
         sumi: "#2f3a35",
         sakura: "#d76f86"
       },
@@ -16,7 +16,7 @@ const config: Config = {
         soft: "0 14px 40px rgba(23, 32, 27, 0.08)"
       },
       ringColor: {
-        DEFAULT: "rgba(95, 127, 82, 0.4)"
+        DEFAULT: "rgba(46, 125, 100, 0.4)"
       },
       transitionDuration: {
         "150": "150ms",

@@ -7,6 +7,7 @@ import {
   BlankDayCell,
   CountBadge,
   MonthTab,
+  MonthTabBar,
   WeekdayHeader,
   dayCellClass,
   dayNumberClass,
@@ -87,10 +88,10 @@ export function BookingCalendar({ dates, nextMonthStart, slots, teacherId, today
   return (
     <div className="space-y-5">
       {/* Month tabs */}
-      <div className="flex gap-1 rounded-xl border border-ink/10 bg-paper/70 p-1 shadow-inner">
+      <MonthTabBar>
         <MonthTab active={activeTab === "current"} count={currentMonthSlotCount} label={currentMonthLabel} onClick={() => selectMonth("current")} />
         <MonthTab active={activeTab === "next"} count={nextMonthSlotCount} label={nextMonthLabel} onClick={() => selectMonth("next")} />
-      </div>
+      </MonthTabBar>
 
       {/* Calendar + slot sidebar */}
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_280px]">

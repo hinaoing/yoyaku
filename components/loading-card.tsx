@@ -31,11 +31,11 @@ export function PageTitleLoading({ withDescription = false }: { withDescription?
 
 export function MonthTabsLoading() {
   return (
-    <div className="flex gap-1 rounded-xl border border-ink/10 bg-paper/70 p-1 shadow-inner">
+    <div className="flex gap-1 rounded-xl bg-ink/[0.06] p-1">
       <div className="flex h-[42px] flex-1 items-center justify-center rounded-lg bg-matcha/20">
         <div className="h-4 w-24 rounded-full bg-white/40" />
       </div>
-      <div className="flex h-[42px] flex-1 items-center justify-center rounded-lg border border-ink/10 bg-white/75">
+      <div className="flex h-[42px] flex-1 items-center justify-center rounded-lg">
         <div className="h-4 w-24 rounded-full bg-sumi/[0.08]" />
       </div>
     </div>
