@@ -19,6 +19,51 @@ export function TeacherCardLoading() {
   );
 }
 
+export function FormFieldLoading({ kind = "input" }: { kind?: "input" | "textarea" | "textarea-sm" }) {
+  const boxClass =
+    kind === "textarea"
+      ? "h-32 rounded-lg border border-ink/10 bg-white"
+      : kind === "textarea-sm"
+        ? "h-28 rounded-lg border border-ink/10 bg-white"
+        : "h-[50px] rounded-lg border border-ink/10 bg-white";
+
+  return (
+    <div className="grid gap-2">
+      <div className="h-4 w-20 rounded-full bg-sumi/[0.08]" />
+      <div className={boxClass} />
+    </div>
+  );
+}
+
+export function SubmitButtonLoading() {
+  return <div className="h-12 w-32 rounded-lg bg-matcha/20" />;
+}
+
+export function BookingDetailLoading() {
+  return (
+    <div className="mx-auto max-w-3xl animate-softPulse space-y-6">
+      <div className="h-4 w-32 rounded-full bg-matcha/15" />
+      <section className="space-y-3">
+        <div className="h-4 w-16 rounded bg-matcha/15" />
+        <div className="h-9 w-80 max-w-full rounded bg-sumi/10" />
+      </section>
+      <section className="rounded-xl border border-ink/10 bg-white p-6 shadow-soft">
+        <div className="grid gap-5 sm:grid-cols-2">
+          {Array.from({ length: 4 }, (_, index) => (
+            <div className="flex items-start gap-3" key={index}>
+              <div className="size-10 shrink-0 rounded-full bg-matcha/10" />
+              <div className="min-w-0 flex-1">
+                <div className="h-3 w-20 rounded-full bg-sumi/[0.07]" />
+                <div className="mt-2 h-5 w-4/5 rounded-md bg-sumi/[0.08]" />
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+    </div>
+  );
+}
+
 export function PageTitleLoading({ withDescription = false }: { withDescription?: boolean }) {
   return (
     <section className="animate-softPulse space-y-3">
