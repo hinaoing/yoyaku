@@ -64,6 +64,28 @@ export function BookingDetailLoading() {
   );
 }
 
+export function ArticleLoading() {
+  return (
+    <div className="mx-auto max-w-3xl animate-softPulse space-y-8 rounded-xl border border-ink/10 bg-white p-6 shadow-soft sm:p-8">
+      <header className="space-y-3">
+        <div className="h-4 w-16 rounded-full bg-matcha/15" />
+        <div className="h-9 w-64 max-w-full rounded-md bg-sumi/10" />
+        <div className="h-4 w-40 rounded-full bg-sumi/[0.07]" />
+      </header>
+      <div className="space-y-7">
+        {Array.from({ length: 5 }, (_, index) => (
+          <section className="space-y-2.5" key={index}>
+            <div className="h-5 w-48 max-w-full rounded-md bg-sumi/[0.08]" />
+            <div className="h-4 rounded-full bg-sumi/[0.07]" />
+            <div className="h-4 w-11/12 rounded-full bg-sumi/[0.07]" />
+            <div className="h-4 w-4/5 rounded-full bg-sumi/[0.07]" />
+          </section>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export function PageTitleLoading({ withDescription = false }: { withDescription?: boolean }) {
   return (
     <section className="animate-softPulse space-y-3">
