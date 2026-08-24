@@ -1,6 +1,6 @@
 "use client";
 
-import { Loader2, Plus, Save, Trash2 } from "lucide-react";
+import { ChevronDown, Loader2, Plus, Save, Trash2 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { bookingTimeKey, slotContainsBooking, type AvailabilityBooking } from "@/lib/availability-bookings";
@@ -417,7 +417,7 @@ function SlotEditor({ currentTime, defaultStartTime, invalid, locked, onRemove, 
 
   return (
     <div className={invalid ? "rounded-lg border border-sakura/30 bg-sakura/[0.04] p-3" : "rounded-lg border border-ink/10 bg-white p-3"}>
-      <div className="grid grid-cols-[minmax(0,1fr)_5rem_2.375rem] items-end gap-3">
+      <div className="grid grid-cols-[minmax(0,1fr)_4.5rem_2.375rem] items-end gap-2">
         <label className="grid min-w-0 gap-1 text-xs text-sumi">
           開始
           <TimeSelect
@@ -451,29 +451,35 @@ function TimeSelect({ min, onChange, value }: { min?: string; onChange: (value: 
   const hour = normalizeHour(rawHour);
   const minute = normalizeMinute(rawMinute);
   const selectClass =
-    "w-[4.75rem] h-[38px] rounded-lg border border-ink/15 bg-white pl-3 pr-8 text-sm outline-none ring-matcha/30 transition-all duration-200 focus:border-matcha/50 focus:ring-4";
+    "h-[38px] w-full appearance-none rounded-lg border border-ink/15 bg-white px-2 pr-7 text-center text-sm tabular-nums outline-none ring-matcha/30 transition-all duration-200 focus:border-matcha/50 focus:ring-4";
 
   function changeTime(part: "hour" | "minute", nextValue: string) {
     onChange(part === "hour" ? `${nextValue}:${minute}` : `${hour}:${nextValue}`);
   }
 
   return (
-    <div className="grid grid-cols-[4.75rem_auto_4.75rem] items-center gap-1">
-      <select className={selectClass} onChange={(event) => changeTime("hour", event.target.value)} value={hour}>
-        {TIME_HOURS.map((option) => (
-          <option disabled={min ? option < minHour : false} key={option} value={option}>
-            {option}
-          </option>
-        ))}
-      </select>
+    <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-1">
+      <div className="relative min-w-0">
+        <select aria-label="開始時刻（時）" className={selectClass} onChange={(event) => changeTime("hour", event.target.value)} value={hour}>
+          {TIME_HOURS.map((option) => (
+            <option disabled={min ? option < minHour : false} key={option} value={option}>
+              {option}
+            </option>
+          ))}
+        </select>
+        <ChevronDown aria-hidden="true" className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-sumi/55" size={14} />
+      </div>
       <span className="text-sm text-sumi/45">:</span>
-      <select className={selectClass} onChange={(event) => changeTime("minute", event.target.value)} value={minute}>
-        {TIME_MINUTES.map((option) => (
-          <option disabled={min ? hour === minHour && option < minMinute : false} key={option} value={option}>
-            {option}
-          </option>
-        ))}
-      </select>
+      <div className="relative min-w-0">
+        <select aria-label="開始時刻（分）" className={selectClass} onChange={(event) => changeTime("minute", event.target.value)} value={minute}>
+          {TIME_MINUTES.map((option) => (
+            <option disabled={min ? hour === minHour && option < minMinute : false} key={option} value={option}>
+              {option}
+            </option>
+          ))}
+        </select>
+        <ChevronDown aria-hidden="true" className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-sumi/55" size={14} />
+      </div>
     </div>
   );
 }
